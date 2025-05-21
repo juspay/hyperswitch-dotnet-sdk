@@ -1,0 +1,11 @@
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/bin/Debug/net9.0/Hyperswitch.Sdk.deps.json
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/bin/Debug/net9.0/Hyperswitch.Sdk.dll
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/bin/Debug/net9.0/Hyperswitch.Sdk.pdb
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.GeneratedMSBuildEditorConfig.editorconfig
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.AssemblyInfoInputs.cache
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.AssemblyInfo.cs
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.csproj.CoreCompileInputs.cache
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.dll
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/refint/Hyperswitch.Sdk.dll
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/Hyperswitch.Sdk.pdb
+/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/obj/Debug/net9.0/ref/Hyperswitch.Sdk.dll
