@@ -233,3 +233,45 @@ catch (Exception ex)
 *   `ListPaymentMethodsAsync(string customerId)`: Lists saved payment methods for a customer (uses `GET /customers/{customerId}/payment_methods`).
 
 Refer to the method signatures within each service class and the corresponding model classes in `Hyperswitch.Sdk.Models` for detailed request and response structures.
+
+## Running the Sample Application (Testing the SDK Flows)
+
+The SDK includes a sample console application (`Hyperswitch.Sdk.Sample`) that demonstrates how to use the various SDK features and tests all implemented API flows.
+
+To run the sample application:
+
+1.  **Navigate to the Sample Project Directory:**
+    Open your terminal or command prompt and navigate to the `Hyperswitch.Sdk.Sample` directory within the main SDK folder.
+    ```bash
+    cd path/to/your/server-side-sdk/Hyperswitch.Sdk.Sample
+    ```
+    *(Replace `path/to/your/server-side-sdk/` with the actual path to where you have the SDK projects.)*
+
+2.  **Configure API Key (Important):**
+    *   Open the `Hyperswitch.Sdk.Sample/Program.cs` file.
+    *   Locate the following line in the `Main` method:
+        ```csharp
+        string apiKey = "API_KEY"; 
+        ```
+    *   **Replace `"API_KEY"` with your actual Hyperswitch secret API key for the sandbox environment.** The sample is pre-configured to use the Hyperswitch sandbox URL (`https://sandbox.hyperswitch.io`).
+
+3.  **Build and Run:**
+    *   Once the API key is configured, you can build and run the sample application using the .NET CLI:
+        ```bash
+        dotnet run
+        ```
+    *   Alternatively, if you prefer to build first and then run:
+        ```bash
+        dotnet build
+        dotnet run --no-build
+        ```
+    *   You can also run it directly from an IDE like Visual Studio by setting `Hyperswitch.Sdk.Sample` as the startup project and running it.
+
+4.  **Observe Output:**
+    *   The console will display the output of each test scenario, showing the API requests being made (implicitly) and the responses received.
+    *   This includes creating payments, confirming them, attempting refunds, listing refunds, listing customer payment methods, etc.
+
+5.  **Notes on Test Scenarios:**
+    *   **`requires_customer_action`:** Many payment scenarios in the sandbox environment will result in a `requires_customer_action` status. This is expected and simulates flows where the user needs to authenticate (e.g., 3D Secure). To fully test subsequent actions like capture or refund on these payments, you would typically need to complete the action by visiting the `NextAction.RedirectToUrl` provided in the console output in a browser.
+    *   **Refund Prerequisite:** Scenario 6 (Refund Payment) attempts to create a payment that should ideally become `succeeded` quickly for refund testing. If it remains in `requires_customer_action`, the refund test for that specific payment will be skipped.
+    *   **Customer ID for Listing Payment Methods:** Scenario 9 (List Customer Payment Methods) uses a hardcoded `customer_id`. If this customer does not exist in your sandbox or has no saved payment methods, this specific test will show a 404 error or an empty list, respectively. This is a data-dependent test.
