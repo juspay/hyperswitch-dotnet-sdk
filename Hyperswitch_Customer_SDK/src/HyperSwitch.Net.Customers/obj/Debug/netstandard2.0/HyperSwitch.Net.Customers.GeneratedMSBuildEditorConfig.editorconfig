@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = HyperSwitch.Net.Customers
+build_property.ProjectDir = /Users/sk.sakil/server-side-sdk/Hyperswitch_Customer_SDK/src/HyperSwitch.Net.Customers/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>HyperSwitch.Net.Customers</id>
+    <version>1.0.0</version>
+    <authors>Your Name / Company</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <projectUrl>https://github.com/your-repo/HyperSwitch.Net.Customers</projectUrl>
+    <description>A .NET SDK for interacting with the HyperSwitch Customer CRUD APIs.</description>
+    <copyright>Copyright (c) Your Company Year</copyright>
+    <tags>hyperswitch api client sdk customer</tags>
+    <repository type="git" url="https://github.com/your-repo/HyperSwitch.Net.Customers.git" commit="3828ec534935b26376fd225fa0d09129cae9374d" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Polly" version="8.5.2" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Json" version="9.0.5" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="/Users/sk.sakil/server-side-sdk/src/HyperSwitch.Net.Customers/bin/Release/netstandard2.0/HyperSwitch.Net.Customers.dll" target="lib/netstandard2.0/HyperSwitch.Net.Customers.dll" />
+  </files>
+</package>
