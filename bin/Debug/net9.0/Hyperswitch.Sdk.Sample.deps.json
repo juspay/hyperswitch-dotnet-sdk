@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Hyperswitch.Sdk.Sample/1.0.0": {
+        "dependencies": {
+          "Hyperswitch.Sdk": "1.0.0"
+        },
+        "runtime": {
+          "Hyperswitch.Sdk.Sample.dll": {}
+        }
+      },
+      "Hyperswitch.Sdk/1.0.0": {
+        "runtime": {
+          "Hyperswitch.Sdk.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Hyperswitch.Sdk.Sample/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Hyperswitch.Sdk/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

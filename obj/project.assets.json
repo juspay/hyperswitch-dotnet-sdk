@@ -1,0 +1,95 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {
+      "Hyperswitch.Sdk/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/Hyperswitch.Sdk.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Hyperswitch.Sdk.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Hyperswitch.Sdk/1.0.0": {
+      "type": "project",
+      "path": "../Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
+      "msbuildProject": "../Hyperswitch.Sdk/Hyperswitch.Sdk.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0": [
+      "Hyperswitch.Sdk >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "/Users/sweta.sharma/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk.Sample/Hyperswitch.Sdk.Sample.csproj",
+      "projectName": "Hyperswitch.Sdk.Sample",
+      "projectPath": "/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk.Sample/Hyperswitch.Sdk.Sample.csproj",
+      "packagesPath": "/Users/sweta.sharma/.nuget/packages/",
+      "outputPath": "/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk.Sample/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/sweta.sharma/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {
+            "/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {
+              "projectPath": "/Users/sweta.sharma/Desktop/Juspay/server-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.300/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
