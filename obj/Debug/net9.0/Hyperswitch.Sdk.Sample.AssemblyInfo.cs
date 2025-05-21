@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Hyperswitch.Sdk.Sample")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da303c0f6efde209f952bb085470f385c651f458")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+207c9351b74cc9d609915950beb5778c1af6eb7c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Hyperswitch.Sdk.Sample")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Hyperswitch.Sdk.Sample")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
