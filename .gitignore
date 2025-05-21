@@ -1,0 +1,59 @@
+# OS specific
+.DS_Store
+
+# .NET Core build output folders
+**/bin/
+**/obj/
+
+# Build results (broader patterns)
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+Build/
+bld/
+[Ll]og/
+
+# NuGet packages folder
+**/packages/
+!**/packages/build/ # Keep this for JetBrains Rider project configuration
+
+# Roslyn files
+.roslyn/
+
+# User-specific files (often ignored for .NET)
+*.user
+*.userosscache
+*.sln.docstates # Specific state file, .sln itself is usually committed
+
+# Logs (from your previous .gitignore or common)
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# Dependency directories (from your previous .gitignore or common)
+node_modules/
+
+# Environment variables (from your previous .gitignore or common)
+.env
+
+# Editor directories and files (consolidated)
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+# *.sln # To be committed: Remove this line if you want .sln files tracked. Add it if you want them ignored.
+*.sw?
+
+# Task Master files (TO REVIEW)
+# To be committed: Remove these lines if you want tasks.json and tasks/ tracked.
+# To be ignored: Keep these lines.
+tasks.json
+tasks/ 
