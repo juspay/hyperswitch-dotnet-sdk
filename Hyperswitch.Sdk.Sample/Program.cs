@@ -15,9 +15,9 @@ namespace Hyperswitch.Sdk.Sample
         {
             Console.WriteLine("Hyperswitch SDK Sample - Full Test Suite");
             
-            string secretKey = "snd_Hk5y3lDZtnUoEr9liTaU7xiyrisfX6pxFfMNEpjiF6YiqJs574PPSY4yKjNAT19t"; 
-            string publishableKey = "pk_snd_5f0dc084ba1045d5a04925eb943161f9";
-            string defaultProfileId = "pro_QqM6TOJtfvsbp6VSvhIn";
+            string secretKey = "API_KEY_HERE"; 
+            string publishableKey = "PUBLISHABLE_KEY_HERE";
+            string defaultProfileId = "PROFILE_ID_HERE";
 
             var client = new HyperswitchClient(secretKey: secretKey, publishableKey: publishableKey, defaultProfileId: defaultProfileId);
             var paymentService = new PaymentService(client);
@@ -32,7 +32,7 @@ namespace Hyperswitch.Sdk.Sample
 
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
-            // string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; 
+            // string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; // Unused variable
             string? createdTestCustomerId = null;
 
             Console.WriteLine("\n--- SCENARIO 1: MANUAL CAPTURE (Two-Step Create-Confirm) ---");
@@ -194,6 +194,7 @@ namespace Hyperswitch.Sdk.Sample
                     CustomerId = customerId, 
                     Confirm = false,
                     Description = "Payment for Customer PM List Test"
+                    // ProfileId will use default from client
                 };
                 paymentIntent = await paymentService.CreateAsync(createPiRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
@@ -237,6 +238,7 @@ namespace Hyperswitch.Sdk.Sample
                     Confirm = false, 
                     SetupFutureUsage = "on_session", 
                     Description = "Test Payment Flow with PM Selection"
+                    // ProfileId will use default from client
                 };
                 paymentIntent = await paymentService.CreateAsync(createPiRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
@@ -317,7 +319,7 @@ namespace Hyperswitch.Sdk.Sample
         {
             Console.WriteLine("   Creating a payment with auto-capture for refund testing...");
             // ProfileId will be picked from client's default
-            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
+            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", /* ProfileId removed again */ Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
             PaymentIntentResponse? paymentIntent = await paymentService.CreateAsync(createRequest);
             if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("   Payment creation for refund test failed."); return null; }
             PrintPaymentDetails("   Prereq Payment Created", paymentIntent);
@@ -342,7 +344,7 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent (confirm: false)...");
-                // ProfileId will be picked from client's default if not set here
+                // ProfileId will be picked from client's default
                 var createRequest = new PaymentIntentRequest { Amount = 650, Currency = "USD", /* ProfileId removed */ Confirm = false, CaptureMethod = captureMethod, PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-sdk-test@example.com", Description = $"Test SDK Payment ({captureMethod} capture, two-step)", ReturnUrl = "https://example.com/sdk_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "123 Test St", City="Testville", Country="US", Zip="12345"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-GB", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.193", AcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8", UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId) || string.IsNullOrEmpty(paymentIntent.ClientSecret)) { PrintAndReturnError("PaymentId or ClientSecret is missing after create."); return null; }
@@ -536,7 +538,7 @@ namespace Hyperswitch.Sdk.Sample
             {
                 Console.WriteLine($"\n1. Retrieving refund {refundIdToUpdate} before update...");
                 RefundResponse? refundDetails = await refundService.RetrieveRefundAsync(refundIdToUpdate);
-                if (refundDetails == null) { PrintAndReturnError($"Failed to retrieve refund {refundIdToUpdate} before update."); return; } // Explicit return for void Task
+                if (refundDetails == null) { PrintAndReturnError($"Failed to retrieve refund {refundIdToUpdate} before update."); return; } 
                 PrintRefundDetails("1. Before Update Refund", refundDetails);
 
                 if (refundDetails.Status == "pending" || refundDetails.Status == "requires_action")
@@ -544,10 +546,10 @@ namespace Hyperswitch.Sdk.Sample
                     Console.WriteLine($"\n2. Updating refund {refundIdToUpdate}...");
                     var updateRequest = new RefundUpdateRequest { Reason = "Updated reason via SDK", Metadata = new Dictionary<string, string> { { "update_source", "sdk_sample_test" }, { "initial_reason", refundDetails.Reason ?? "N/A" } } };
                     RefundResponse? updatedRefund = await refundService.UpdateRefundAsync(refundIdToUpdate, updateRequest);
-                    if (updatedRefund == null) { PrintAndReturnError("Refund Update call returned null or failed."); return; } // Explicit return
+                    if (updatedRefund == null) { PrintAndReturnError("Refund Update call returned null or failed."); return; } 
                     PrintRefundDetails("2. After Update Refund Attempt", updatedRefund);
                 } else { Console.ForegroundColor = ConsoleColor.Magenta; Console.WriteLine($"\n2. Refund status is '{refundDetails.Status}'. Update not typically allowed/meaningful. Skipping update attempt."); Console.ResetColor(); }
-                return; // Explicit return at the end of try block
+                return; 
             }
             catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in update refund flow"); return; }
             catch (Exception ex) { PrintGenericError(ex, "in update refund flow"); return; }
