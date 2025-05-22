@@ -69,6 +69,15 @@ namespace Hyperswitch.Sdk.Services
         /// <returns>A list of refund objects.</returns>
         public async Task<RefundListResponse?> ListRefundsAsync(RefundListRequest? request = null)
         {
+            // Ensure request object exists if we need to set a default ProfileId
+            request ??= new RefundListRequest();
+
+            // Ensure ProfileId is set if not provided in request and a default is available
+            if (string.IsNullOrWhiteSpace(request.ProfileId) && !string.IsNullOrWhiteSpace(_client.DefaultProfileId))
+            {
+                request.ProfileId = _client.DefaultProfileId;
+                System.Console.WriteLine($"[RefundService DEBUG] Using default ProfileId: {request.ProfileId} for List Refunds.");
+            }
             return await _client.PostAsync<RefundListRequest?, RefundListResponse>(RefundListUrl, request);
         }
     }

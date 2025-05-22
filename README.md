@@ -26,54 +26,48 @@ The official Hyperswitch .NET SDK provides .NET developers with a simple and con
 ## Prerequisites
 
 *   **.NET 9.0 SDK or later:** This SDK targets `net9.0`. Ensure your development environment has the .NET 9.0 SDK installed. Your project should also target a compatible framework version (e.g., `net9.0`).
-*   **Hyperswitch Account & API Key:** You will need an active Hyperswitch account and your secret API key to make calls to the API. You can obtain these from your Hyperswitch dashboard.
+*   **Hyperswitch Account & API Keys:** You will need an active Hyperswitch account.
+    *   **Secret API Key:** Required for most server-side operations.
+    *   **Publishable API Key:** Required for specific client-side oriented operations if you intend to use them via the SDK (e.g., listing payment methods using a `client_secret`).
+    *   **Profile ID:** You might need one or more Profile IDs configured in your Hyperswitch account. The SDK allows setting a default Profile ID.
+    *   Obtain these from your Hyperswitch dashboard.
 
 ## Setup & Installation
 
 To use this SDK in your .NET application, you will need to reference it directly from its source code.
 
 1.  **Obtain the SDK Source Code:**
-    *   Ensure you have the complete source code for the `Hyperswitch.Sdk` project (e.g., by cloning its repository or having it as part of your solution). The `Hyperswitch.Sdk` folder should be accessible from your consuming project.
+    *   Ensure you have the complete source code for the `Hyperswitch.Sdk` project.
 
 2.  **Add a Project Reference:**
-    *   In your consuming .NET project (e.g., a .NET Console App, Web API, etc.), you need to add a reference to the `Hyperswitch.Sdk.csproj` file.
-    *   **Using Visual Studio:**
-        1.  In Solution Explorer, right-click on your project's "Dependencies".
-        2.  Select "Add Project Reference..."
-        3.  In the Reference Manager dialog, click "Browse..." and navigate to the location of the `Hyperswitch.Sdk` folder, then select the `Hyperswitch.Sdk.csproj` file. Click "OK".
-    *   **Using .NET CLI:**
-        1.  Open your terminal or command prompt.
-        2.  Navigate to the directory of your consuming project (the one that will use the SDK).
-        3.  Run the following command, adjusting the path to `Hyperswitch.Sdk.csproj` as necessary relative to your project's location:
-            ```bash
-            dotnet add reference path/to/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj
-            ```
-            *(Example: `dotnet add reference ../Hyperswitch.Sdk/Hyperswitch.Sdk.csproj` if your consuming project and the `Hyperswitch.Sdk` folder are sibling directories.)*
+    *   In your consuming .NET project, add a reference to the `Hyperswitch.Sdk.csproj` file.
+    *   **Using Visual Studio:** Right-click "Dependencies" > "Add Project Reference..." > Browse to `Hyperswitch.Sdk.csproj`.
+    *   **Using .NET CLI:** `dotnet add reference path/to/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj`
 
 3.  **Target Framework:**
     *   This SDK targets `.NET 9.0`. Ensure your consuming project is compatible.
 
-After adding the project reference, you can use the SDK's namespaces, classes, and methods in your project by adding `using` statements:
+After adding the project reference, you can use the SDK's namespaces:
 ```csharp
 using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Services;
 using Hyperswitch.Sdk.Models;
 using Hyperswitch.Sdk.Exceptions; // For HyperswitchApiException
 ```
-The SDK source code includes XML documentation comments (`/// <summary>...`) which can provide IntelliSense in your IDE if your project and the SDK project are part of the same solution.
+The SDK source code includes XML documentation comments for IntelliSense.
 
 ## Getting Started
 
 ### Initialization
 
-To begin using the SDK, you need to initialize the `HyperswitchClient` with your API key and the base URL for the Hyperswitch API environment you are targeting. Then, you can instantiate the service classes you need.
+To begin using the SDK, initialize the `HyperswitchClient`. You must provide your **Secret API Key**. Optionally, you can also provide a **Publishable API Key** (if you intend to use client-side flows like PML with a `client_secret`) and a **Default Profile ID** (which will be used if a `ProfileId` is not specified in individual requests that support it).
 
 ```csharp
 using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Services;
 // ... other necessary usings ...
 
-public class MyHyperswitchIntegration
+public class MyHyperswitchService
 {
     private readonly HyperswitchClient _apiClient;
     public readonly PaymentService Payments;
@@ -81,10 +75,16 @@ public class MyHyperswitchIntegration
     public readonly CustomerService Customers;
     public readonly MerchantService Merchant;
 
-    public MyHyperswitchIntegration(string apiKey, string hyperswitchApiBaseUrl = "https://sandbox.hyperswitch.io")
+    public MyHyperswitchService(string secretKey, string? publishableKey, string? defaultProfileId, string hyperswitchApiBaseUrl = "https://sandbox.hyperswitch.io")
     {
-        // It's recommended to fetch the API key from a secure configuration source, not hardcode it.
-        _apiClient = new HyperswitchClient(hyperswitchApiBaseUrl, apiKey);
+        // It's recommended to fetch API keys and Profile ID from a secure configuration source.
+        _apiClient = new HyperswitchClient(
+            secretKey: secretKey, 
+            publishableKey: publishableKey, 
+            defaultProfileId: defaultProfileId, 
+            baseUrl: hyperswitchApiBaseUrl
+        );
+        
         Payments = new PaymentService(_apiClient);
         Refunds = new RefundService(_apiClient);
         Customers = new CustomerService(_apiClient);
@@ -99,7 +99,11 @@ public class MyHyperswitchIntegration
 }
 
 // How to use it in your application:
-// var hyperswitchService = new MyHyperswitchIntegration("YOUR_API_KEY_HERE"); 
+// var hyperswitchService = new MyHyperswitchService(
+//     "YOUR_SECRET_API_KEY", 
+//     "YOUR_PUBLISHABLE_API_KEY_IF_NEEDED", 
+//     "YOUR_DEFAULT_PROFILE_ID_IF_ANY"
+// ); 
 // await hyperswitchService.CreateSomePayment();
 ```
 **Note:** Always use the Sandbox URL (`https://sandbox.hyperswitch.io`) for testing and development. Replace it with the live URL for production environments.
@@ -107,7 +111,11 @@ public class MyHyperswitchIntegration
 ## Core Concepts
 
 ### API Client
-*   **`HyperswitchClient`**: This is the central class responsible for making HTTP requests to the Hyperswitch API. It handles authentication (using your API key), request serialization, and response deserialization.
+*   **`HyperswitchClient`**: The central class for HTTP requests to the Hyperswitch API. It handles:
+    *   Authentication using your API keys.
+    *   Management of a default Profile ID.
+    *   Request serialization and response deserialization.
+    *   Selection between secret and publishable keys for certain operations.
 
 ### Service Classes
 The SDK is organized into service classes, each corresponding to a major resource:
@@ -116,8 +124,10 @@ The SDK is organized into service classes, each corresponding to a major resourc
 *   `CustomerService`
 *   `MerchantService`
 
+Each service is initialized with the `HyperswitchClient` instance.
+
 ### Request & Response Models
-All API operations use strongly-typed C# classes for request parameters and response data, located in `Hyperswitch.Sdk.Models`.
+All API operations use strongly-typed C# classes for request parameters and response data, located in the `Hyperswitch.Sdk.Models` namespace.
 
 ### Asynchronous Operations
 All API methods are asynchronous (`async Task` or `async Task<T>`). Use `await` for non-blocking calls.
@@ -132,6 +142,7 @@ Below is a summary of available services and key methods. Refer to the source co
 Manages payment intents.
 
 *   **`CreateAsync(PaymentIntentRequest request)`**: Creates a payment.
+    *   If `request.ProfileId` is not set, the `DefaultProfileId` from `HyperswitchClient` (if configured) will be used.
     *   Example:
         ```csharp
         var paymentRequest = new PaymentIntentRequest
@@ -139,13 +150,13 @@ Manages payment intents.
             Amount = 2000, // 20.00 (smallest currency unit)
             Currency = "USD",
             Confirm = true, // Attempt to confirm immediately
-            // ProfileId = "YOUR_PROFILE_ID_HERE", // Optional, if needed
+            // ProfileId = "prof_specific", // Overrides default if set
             // ... other parameters like PaymentMethodData, CustomerId, ReturnUrl
         };
         PaymentIntentResponse? payment = await Payments.CreateAsync(paymentRequest);
         ```
 *   **`RetrieveAsync(string paymentId)`**: Gets payment details.
-*   **`SyncPaymentStatusAsync(string paymentId, string? clientSecret = null, bool forceSync = false)`**: Gets latest payment status.
+*   **`SyncPaymentStatusAsync(string paymentId, bool forceSync = false)`**: Gets latest payment status.
 *   **`ConfirmPaymentAsync(string paymentId, PaymentConfirmRequest? confirmRequest = null)`**: Confirms a payment.
 *   **`CapturePaymentAsync(string paymentId, PaymentCaptureRequest? captureRequest = null)`**: Captures an authorized payment.
 *   **`UpdatePaymentAsync(string paymentId, PaymentUpdateRequest updateRequest)`**: Updates a payment.
@@ -170,6 +181,7 @@ Manages refunds.
 *   **`RetrieveRefundAsync(string refundId)`**: Gets refund details.
 *   **`UpdateRefundAsync(string refundId, RefundUpdateRequest request)`**: Updates a refund.
 *   **`ListRefundsAsync(RefundListRequest? request = null)`**: Lists refunds.
+    *   If `request.ProfileId` is not set, the `DefaultProfileId` from `HyperswitchClient` (if configured) will be used.
 
 ---
 
@@ -188,20 +200,36 @@ Manages customers and their payment methods.
 ### `MerchantService`
 Merchant-level operations.
 
-*   **`ListAvailablePaymentMethodsAsync(MerchantPMLRequest? request = null)`**: Lists merchant's available payment methods.
-    *   Uses `GET /account/payment_methods`.
-    *   **Note:** Based on testing, this endpoint might require a specific `profile_id` to be implicitly available via your API key or explicitly sent if your account has multiple profiles. If you encounter a "Profile id not found" error, ensure your API key context is correct or try providing a `ProfileId` in the `MerchantPMLRequest`.
-    *   Example:
-        ```csharp
-        var pmlRequest = new MerchantPMLRequest 
-        { 
-            // ProfileId = "YOUR_PROFILE_ID_HERE", // May be required depending on API key setup
-            // Country = "US", 
-            // Currency = "USD" 
-        };
-        MerchantPMLResponse? pml = await Merchant.ListAvailablePaymentMethodsAsync(pmlRequest);
-        if (pml?.PaymentMethods != null) { /* Process available payment methods */ }
-        ```
+*   **`ListAvailablePaymentMethodsAsync(MerchantPMLRequest? request = null)`**: Lists merchant's available payment methods (`GET /account/payment_methods`). This method behaves differently based on the request and client configuration:
+    *   **Server-Side Usage (Secret Key):**
+        *   If `request.ClientSecret` is **NOT** provided.
+        *   The SDK uses the **Secret API Key**.
+        *   It filters by `Country`, `Currency`, `Amount`, and `ProfileId`.
+        *   If `request.ProfileId` is not set, the `DefaultProfileId` from `HyperswitchClient` (if configured) will be used.
+        *   Example:
+            ```csharp
+            var pmlRequest = new MerchantPMLRequest 
+            { 
+                // ProfileId = "prof_specific_for_secret_key_call", // Optional, uses default if not set
+                Country = "US", 
+                Currency = "USD" 
+            };
+            MerchantPMLResponse? pml = await Merchant.ListAvailablePaymentMethodsAsync(pmlRequest);
+            ```
+    *   **Client-Side Flow Emulation (Publishable Key):**
+        *   If `request.ClientSecret` **IS** provided.
+        *   The SDK uses the **Publishable API Key** (must be configured in `HyperswitchClient`).
+        *   The query will *only* include `client_secret`. Other parameters in `MerchantPMLRequest` (like Country, Amount, ProfileId) are ignored for this specific call type.
+        *   This is useful if the server needs to fetch payment methods on behalf of a client that has obtained a `client_secret` (e.g., from a Payment Intent).
+        *   Example:
+            ```csharp
+            // Assuming paymentIntent.ClientSecret is available
+            var pmlRequestClientSecret = new MerchantPMLRequest 
+            { 
+                ClientSecret = paymentIntent.ClientSecret 
+            };
+            MerchantPMLResponse? pml = await Merchant.ListAvailablePaymentMethodsAsync(pmlRequestClientSecret);
+            ```
 
 ---
 
@@ -225,6 +253,7 @@ catch (HyperswitchApiException apiEx)
     {
         Console.WriteLine($"  Code: {apiEx.ErrorDetails.Error.Code}, Details: {apiEx.ErrorDetails.Error.Message}");
     }
+    // Log apiEx.ResponseContent for full error details from the API
 }
 ```
 
@@ -234,9 +263,12 @@ The SDK includes a sample console application (`Hyperswitch.Sdk.Sample`) demonst
 
 **To run the sample:**
 
-1.  Navigate to `Hyperswitch.Sdk.Sample` directory.
-2.  Open `Program.cs` and replace `YOUR_API_KEY_HERE` (placeholder for `apiKey` variable) with your actual Hyperswitch secret API key.
-3.  Run: `dotnet run`
+1.  Navigate to the `Hyperswitch.Sdk.Sample` directory.
+2.  Open `Program.cs`. At the beginning of the `Main` method, configure the following string variables:
+    *   `secretKey`: Your Hyperswitch Secret API Key.
+    *   `publishableKey`: Your Hyperswitch Publishable API Key (can be `null` if not testing PML with client_secret).
+    *   `defaultProfileId`: Your default Hyperswitch Profile ID (can be `null` if you always specify it in requests).
+3.  Run the sample application: `dotnet run`
 
 ## Contributing
 For contributions, please contact the Hyperswitch team or refer to any contribution guidelines provided with the source repository.

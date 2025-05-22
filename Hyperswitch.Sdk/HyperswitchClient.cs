@@ -5,16 +5,25 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Hyperswitch.Sdk.Exceptions; // Will be created later
-using Hyperswitch.Sdk.Models;     // Will be created later
+using Hyperswitch.Sdk.Exceptions;
+using Hyperswitch.Sdk.Models;
 
 namespace Hyperswitch.Sdk
 {
+    public enum ApiKeyType 
+    {
+        Secret,
+        Publishable
+    }
+
     public class HyperswitchClient : IDisposable
     {
         private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
+        private readonly string _secretKey;
+        private readonly string? _publishableKey;
         private static readonly string DefaultBaseUrl = "https://sandbox.hyperswitch.io";
+
+        internal string? DefaultProfileId { get; private set; }
 
         private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
         {
@@ -23,42 +32,80 @@ namespace Hyperswitch.Sdk
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
-        public HyperswitchClient(string apiKey, string? baseUrl = null)
+        public HyperswitchClient(string secretKey, string? publishableKey = null, string? defaultProfileId = null, string? baseUrl = null)
         {
-            if (string.IsNullOrWhiteSpace(apiKey))
-                throw new ArgumentNullException(nameof(apiKey), "API key cannot be null or empty.");
+            if (string.IsNullOrWhiteSpace(secretKey))
+                throw new ArgumentNullException(nameof(secretKey), "Secret API key cannot be null or empty.");
 
-            _apiKey = apiKey;
+            _secretKey = secretKey;
+            _publishableKey = publishableKey;
+            DefaultProfileId = defaultProfileId;
+
             _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(baseUrl ?? DefaultBaseUrl)
             };
-            // _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey); // Old auth
-            _httpClient.DefaultRequestHeaders.Add("api-key", _apiKey); // New auth based on cURL
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        internal async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest payload)
+        private string GetApiKey(ApiKeyType keyType)
+        {
+            if (keyType == ApiKeyType.Publishable)
+            {
+                if (string.IsNullOrWhiteSpace(_publishableKey))
+                    throw new InvalidOperationException("Publishable key requested but not configured in HyperswitchClient.");
+                return _publishableKey;
+            }
+            return _secretKey; // Default to secret key
+        }
+
+        internal async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest payload, ApiKeyType keyType = ApiKeyType.Secret)
         {
             var jsonPayload = JsonSerializer.Serialize(payload, JsonSerializerOptions);
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, url);
+            requestMessage.Headers.Add("api-key", GetApiKey(keyType));
+            requestMessage.Content = content;
 
-            var response = await _httpClient.PostAsync(url, content);
+            System.Console.WriteLine($"[HyperswitchClient DEBUG] Request: {requestMessage.Method} {requestMessage.RequestUri}");
+            foreach (var header in requestMessage.Headers)
+            {
+                System.Console.WriteLine($"[HyperswitchClient DEBUG] Header: {header.Key}: {string.Join(", ", header.Value)}");
+            }
+            System.Console.WriteLine($"[HyperswitchClient DEBUG] Payload: {jsonPayload}");
+
+            var response = await _httpClient.SendAsync(requestMessage);
             return await HandleResponse<TResponse>(response);
         }
 
-        internal async Task<TResponse> GetAsync<TResponse>(string url)
+        internal async Task<TResponse> GetAsync<TResponse>(string url, ApiKeyType keyType = ApiKeyType.Secret)
         {
-            var response = await _httpClient.GetAsync(url);
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            requestMessage.Headers.Add("api-key", GetApiKey(keyType));
+            
+            System.Console.WriteLine($"[HyperswitchClient DEBUG] Request: {requestMessage.Method} {requestMessage.RequestUri}");
+            foreach (var header in requestMessage.Headers)
+            {
+                System.Console.WriteLine($"[HyperswitchClient DEBUG] Header: {header.Key}: {string.Join(", ", header.Value)}");
+            }
+            
+            var response = await _httpClient.SendAsync(requestMessage);
             return await HandleResponse<TResponse>(response);
         }
 
-        internal async Task<TResponse?> DeleteAsync<TResponse>(string url) where TResponse : class // Added class constraint for nullable TResponse
+        internal async Task<TResponse?> DeleteAsync<TResponse>(string url, ApiKeyType keyType = ApiKeyType.Secret) where TResponse : class 
         {
-            var response = await _httpClient.DeleteAsync(url);
-            // HandleResponse might need adjustment if Delete typically returns 204 No Content
-            // and TResponse is expected to be something specific like CustomerDeleteResponse.
-            // If 204, responseContent will be empty.
+            var requestMessage = new HttpRequestMessage(HttpMethod.Delete, url);
+            requestMessage.Headers.Add("api-key", GetApiKey(keyType));
+
+            System.Console.WriteLine($"[HyperswitchClient DEBUG] Request: {requestMessage.Method} {requestMessage.RequestUri}");
+            foreach (var header in requestMessage.Headers)
+            {
+                System.Console.WriteLine($"[HyperswitchClient DEBUG] Header: {header.Key}: {string.Join(", ", header.Value)}");
+            }
+
+            var response = await _httpClient.SendAsync(requestMessage);
             return await HandleResponse<TResponse>(response); 
         }
 
@@ -70,12 +117,6 @@ namespace Hyperswitch.Sdk
             {
                 if (string.IsNullOrWhiteSpace(responseContent))
                 {
-                    // Handle cases where the response is successful but has no content,
-                    // and TResponse might be a value type or expect no content.
-                    // If TResponse is a reference type, this might return null.
-                    // If TResponse is a value type (e.g. bool for a 204 No Content),
-                    // this might cause issues if not handled carefully by the caller or if default(TResponse) is not appropriate.
-                    // For now, we assume TResponse can be null or default.
                     return default(TResponse)!;
                 }
                 try
@@ -98,7 +139,7 @@ namespace Hyperswitch.Sdk
             }
             catch (JsonException)
             {
-                // Ignore if error response itself is not valid JSON
+                // Ignore
             }
 
             throw new HyperswitchApiException(
