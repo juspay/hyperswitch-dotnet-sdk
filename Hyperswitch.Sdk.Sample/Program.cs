@@ -19,82 +19,279 @@ namespace Hyperswitch.Sdk.Sample
             var paymentService = new PaymentService(client);
             var refundService = new RefundService(client); 
             var customerService = new CustomerService(client);
+            var merchantService = new MerchantService(client); 
+
+            string specificPaymentIdToTest = "pay_fzm9HvSJ1wP5yEBDgdtS";
+            Console.WriteLine($"\n--- SPECIAL TEST: SYNC & REFUND FOR PAYMENT: {specificPaymentIdToTest} ---");
+            await TestSpecificPaymentSyncAndRefundAsync(paymentService, refundService, specificPaymentIdToTest);
+            Console.WriteLine($"\n--- END OF SPECIAL TEST ---");
 
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
-            string? testCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; // From your cURL example
+            string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; 
+            string? createdTestCustomerId = null;
 
-            // Scenario 1: Manual Capture (Two-Step: Create then Confirm)
             Console.WriteLine("\n--- SCENARIO 1: MANUAL CAPTURE (Two-Step Create-Confirm) ---");
             var p1 = await TestPaymentFlowTwoStep(paymentService, "manual");
             if(p1 != null && !string.IsNullOrEmpty(p1.PaymentId)) createdPaymentIds.Add(p1.PaymentId);
-
-            // Scenario 2: Automatic Capture (Two-Step: Create then Confirm)
+            
             Console.WriteLine("\n--- SCENARIO 2: AUTOMATIC CAPTURE (Two-Step Create-Confirm) ---");
             var p2 = await TestPaymentFlowTwoStep(paymentService, "automatic");
             if(p2 != null && !string.IsNullOrEmpty(p2.PaymentId)) createdPaymentIds.Add(p2.PaymentId);
             
-            // Scenario 3: Single-Call Manual Capture (Create with Confirm:true)
             Console.WriteLine("\n--- SCENARIO 3: SINGLE-CALL MANUAL CAPTURE (Create with Confirm:true) ---");
             var p3 = await TestSingleCallManualCaptureAsync(paymentService);
             if(p3 != null && !string.IsNullOrEmpty(p3.PaymentId)) createdPaymentIds.Add(p3.PaymentId);
             
-            // Scenario 4: Void/Cancel Payment
             Console.WriteLine("\n--- SCENARIO 4: VOID/CANCEL PAYMENT ---");
             var p4 = await TestVoidPaymentAsync(paymentService);
             if(p4 != null && !string.IsNullOrEmpty(p4.PaymentId)) createdPaymentIds.Add(p4.PaymentId);
-
-            // Scenario 5: Update Payment
+            
             Console.WriteLine("\n--- SCENARIO 5: UPDATE PAYMENT ---");
             var p5 = await TestUpdatePaymentAsync(paymentService);
             if(p5 != null && !string.IsNullOrEmpty(p5.PaymentId)) createdPaymentIds.Add(p5.PaymentId);
-
-            // Scenario 6: Refund Payment (and then use this refund for Update Refund test)
+            
             Console.WriteLine("\n--- SCENARIO 6: REFUND PAYMENT ---");
             var paymentForRefund = await CreateAndConfirmPaymentForRefund(paymentService); 
             if (paymentForRefund != null && paymentForRefund.Status == "succeeded" && !string.IsNullOrEmpty(paymentForRefund.PaymentId))
-            {
-                 lastCreatedRefund = await TestRefundPaymentAsync(paymentService, refundService, paymentForRefund.PaymentId);
-            }
-            else
-            {
-                Console.WriteLine($"Skipping Refund test as prerequisite payment was not successful (Status: {paymentForRefund?.Status}). Manual intervention (browser auth) might be needed for the payment to succeed.");
-            }
-
-            // Scenario 7: Update Refund (uses refund from Scenario 6 if successful)
+            { lastCreatedRefund = await TestRefundPaymentAsync(paymentService, refundService, paymentForRefund.PaymentId); }
+            else { Console.WriteLine($"Skipping Refund test as prerequisite payment was not successful (Status: {paymentForRefund?.Status})."); }
+            
             Console.WriteLine("\n--- SCENARIO 7: UPDATE REFUND ---");
             if (lastCreatedRefund != null && !string.IsNullOrEmpty(lastCreatedRefund.RefundId) && lastCreatedRefund.Status == "pending") 
-            {
-                await TestUpdateRefundAsync(refundService, lastCreatedRefund.RefundId);
-            }
-            else
-            {
-                Console.WriteLine($"Skipping Update Refund test as no suitable 'pending' refund was created/retrieved in Scenario 6 (Refund Status: {lastCreatedRefund?.Status}).");
-            }
-
-            // Scenario 8: List Refunds
+            { await TestUpdateRefundAsync(refundService, lastCreatedRefund.RefundId); }
+            else { Console.WriteLine($"Skipping Update Refund test (No suitable pending refund from Scenario 6. Status: {lastCreatedRefund?.Status})."); }
+            
             Console.WriteLine("\n--- SCENARIO 8: LIST REFUNDS ---");
-            string? paymentIdForListTest = null; 
-            if(lastCreatedRefund?.PaymentId != null) 
-            {
-                paymentIdForListTest = lastCreatedRefund.PaymentId; 
-                Console.WriteLine($"Listing refunds for payment ID: {paymentIdForListTest} (from Scenario 6 refund)");
+            string? paymentIdForListTest = lastCreatedRefund?.PaymentId ?? createdPaymentIds.FirstOrDefault(id => !string.IsNullOrEmpty(id));
+            if(!string.IsNullOrEmpty(paymentIdForListTest)) { 
+                Console.WriteLine($"Listing refunds for payment ID: {paymentIdForListTest}");
                 await TestListRefundsAsync(refundService, paymentIdToList: paymentIdForListTest); 
-            }
-            else if (createdPaymentIds.Any(id => !string.IsNullOrEmpty(id)))
-            {
-                paymentIdForListTest = createdPaymentIds.First(id => !string.IsNullOrEmpty(id));
-                 Console.WriteLine($"Listing refunds for payment ID: {paymentIdForListTest} (from earlier scenarios)");
-                await TestListRefundsAsync(refundService, paymentIdToList: paymentIdForListTest);
             }
             Console.WriteLine("Listing general refunds (limit 3)...");
             await TestListRefundsAsync(refundService, limit: 3); 
+            
+            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER ---");
+            createdTestCustomerId = await TestCreateCustomerAsync(customerService);
+            
+            if (!string.IsNullOrEmpty(createdTestCustomerId))
+            {
+                Console.WriteLine($"\n--- SCENARIO 11: RETRIEVE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
+                
+                Console.WriteLine($"\n--- SCENARIO 12: UPDATE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                await TestUpdateCustomerAsync(customerService, createdTestCustomerId);
+                
+                Console.WriteLine($"\n--- SCENARIO 13: LIST CUSTOMERS ---");
+                await TestListCustomersAsync(customerService);
 
-            // Scenario 9: List Customer Payment Methods
-            Console.WriteLine("\n--- SCENARIO 9: LIST CUSTOMER PAYMENT METHODS ---");
-            await TestListCustomerPaymentMethodsAsync(customerService, testCustomerId);
+                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Customer: {createdTestCustomerId}) ---");
+                await TestListCustomerPaymentMethodsAsync(customerService, createdTestCustomerId); 
+                                
+                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Customer: {createdTestCustomerId}) ---");
+                await TestFullPaymentFlowWithPMSelection(paymentService, customerService, merchantService, createdTestCustomerId);
+
+                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Customer: {createdTestCustomerId}) ---");
+                await TestListCustomerPMsFromPaymentContext(paymentService, customerService, createdTestCustomerId);
+
+                Console.WriteLine($"\n--- SCENARIO 14: DELETE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                await TestDeleteCustomerAsync(customerService, createdTestCustomerId);
+                
+                Console.WriteLine($"\n--- SCENARIO 15: RETRIEVE DELETED CUSTOMER (ID: {createdTestCustomerId}) ---"); 
+                await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
+            }
+            else { Console.WriteLine("\nSkipping Customer CRUD dependent tests and Full Payment Flow as customer creation failed."); }
 
             client.Dispose();
+        }
+
+        static async Task TestSpecificPaymentSyncAndRefundAsync(PaymentService paymentService, RefundService refundService, string paymentIdToTest)
+        {
+            Console.WriteLine($"  Testing Sync for Payment ID: {paymentIdToTest}");
+            PaymentIntentResponse? paymentDetails = null;
+            try
+            {
+                paymentDetails = await paymentService.SyncPaymentStatusAsync(paymentIdToTest, forceSync: true);
+                if (paymentDetails != null)
+                {
+                    PrintPaymentDetails($"  Synced Payment Details for {paymentIdToTest}", paymentDetails);
+                }
+                else
+                {
+                    PrintAndReturnError($"  Sync returned null for Payment ID: {paymentIdToTest}. It might not exist or an issue occurred.");
+                    return; 
+                }
+            }
+            catch (HyperswitchApiException apiEx)
+            {
+                PrintApiError(apiEx, $"in sync for payment {paymentIdToTest}");
+                return; 
+            }
+            catch (Exception ex)
+            {
+                PrintGenericError(ex, $"in sync for payment {paymentIdToTest}");
+                return; 
+            }
+
+            if (paymentDetails.Status == "succeeded")
+            {
+                Console.WriteLine($"\n  Payment {paymentIdToTest} status is 'succeeded'. Attempting refund...");
+                long amountToRefund = paymentDetails.Amount / 2; 
+                if (amountToRefund == 0 && paymentDetails.Amount > 0) amountToRefund = paymentDetails.Amount; 
+                if (amountToRefund == 0) {
+                    PrintAndReturnError($"  Cannot refund 0 amount for payment {paymentIdToTest}. Original amount: {paymentDetails.Amount}");
+                    return;
+                }
+
+                var refundRequest = new RefundCreateRequest
+                {
+                    PaymentId = paymentIdToTest,
+                    Amount = amountToRefund, 
+                    Reason = "OTHER", 
+                    Metadata = new Dictionary<string, string> { { "test_type", "specific_payment_refund" } }
+                };
+
+                try
+                {
+                    RefundResponse? createdRefund = await refundService.CreateRefundAsync(refundRequest);
+                    if (createdRefund != null && !string.IsNullOrEmpty(createdRefund.RefundId))
+                    {
+                        PrintRefundDetails($"  Refund Created for {paymentIdToTest}", createdRefund);
+                        
+                        await Task.Delay(1000); 
+                        RefundResponse? retrievedRefund = await refundService.RetrieveRefundAsync(createdRefund.RefundId);
+                        PrintRefundDetails($"  Retrieved Refund Status for {createdRefund.RefundId}", retrievedRefund);
+                    }
+                    else
+                    {
+                        PrintAndReturnError($"  Refund creation failed or did not return a RefundId for payment {paymentIdToTest}.");
+                    }
+                }
+                catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in creating refund for payment {paymentIdToTest}"); }
+                catch (Exception ex) { PrintGenericError(ex, $"in creating refund for payment {paymentIdToTest}"); }
+            }
+            else
+            {
+                Console.WriteLine($"  Payment {paymentIdToTest} is not in 'succeeded' state (Current status: {paymentDetails.Status}). Cannot process refund.");
+            }
+        }
+
+        static async Task TestListCustomerPMsFromPaymentContext(PaymentService paymentService, CustomerService customerService, string customerId)
+        {
+            Console.WriteLine($"  Testing listing customer PMs using customer ID from a payment context for Customer ID: {customerId}");
+            PaymentIntentResponse? paymentIntent = null;
+            try
+            {
+                Console.WriteLine("    1. Creating a new Payment Intent associated with the customer...");
+                var createPiRequest = new PaymentIntentRequest
+                {
+                    Amount = 500, // Arbitrary amount
+                    Currency = "USD",
+                    CustomerId = customerId, // Associate with the known customer
+                    Confirm = false,
+                    Description = "Payment for Customer PM List Test"
+                };
+                paymentIntent = await paymentService.CreateAsync(createPiRequest);
+                if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
+                {
+                    PrintAndReturnError("    Payment Intent creation failed for PM list test.");
+                    return;
+                }
+                PrintPaymentDetails("    1. Payment Intent Created", paymentIntent);
+
+                // Ensure CustomerId is present in the response (it should be if provided in request)
+                if (string.IsNullOrEmpty(paymentIntent.CustomerId))
+                {
+                    PrintAndReturnError("    CustomerId not found in PaymentIntentResponse, cannot list PMs.");
+                    return;
+                }
+                
+                Console.WriteLine($"\n    2. Listing payment methods for Customer ID: {paymentIntent.CustomerId} (obtained from payment intent)...");
+                await TestListCustomerPaymentMethodsAsync(customerService, paymentIntent.CustomerId);
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in TestListCustomerPMsFromPaymentContext for customer {customerId}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in TestListCustomerPMsFromPaymentContext for customer {customerId}"); }
+        }
+
+
+        static async Task TestFullPaymentFlowWithPMSelection(
+            PaymentService paymentService, 
+            CustomerService customerService, 
+            MerchantService merchantService, 
+            string customerId)
+        {
+            Console.WriteLine($"Starting full payment flow for customer: {customerId}");
+            PaymentIntentResponse? paymentIntent = null;
+
+            try
+            {
+                Console.WriteLine("  1. Creating Payment Intent (confirm: false)...");
+                var createPiRequest = new PaymentIntentRequest
+                {
+                    Amount = 1500, 
+                    Currency = "USD",
+                    CustomerId = customerId,
+                    Confirm = false, 
+                    SetupFutureUsage = "on_session", 
+                    Description = "Test Payment Flow with PM Selection"
+                };
+                paymentIntent = await paymentService.CreateAsync(createPiRequest);
+                if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
+                { PrintAndReturnError("  Payment Intent creation failed."); return; }
+                PrintPaymentDetails("  1. Payment Intent Created", paymentIntent);
+                string paymentId = paymentIntent.PaymentId;
+
+                Console.WriteLine("\n  2. Listing customer's saved payment methods...");
+                CustomerPaymentMethodListResponse? savedPms = await customerService.ListPaymentMethodsAsync(customerId);
+                PaymentConfirmRequest confirmRequest = new PaymentConfirmRequest { ReturnUrl = "https://example.com/sdk/return" };
+
+                if (savedPms != null && savedPms.Data != null && savedPms.Data.Any())
+                {
+                    var firstSavedPm = savedPms.Data.First();
+                    Console.WriteLine($"    Found {savedPms.PaymentMethodCount} saved PM(s). Simulating selection of first one: {firstSavedPm.PaymentToken} ({firstSavedPm.PaymentMethod} {firstSavedPm.Card?.Last4Digits})");
+                    confirmRequest.PaymentMethodToken = firstSavedPm.PaymentToken; 
+                }
+                else
+                {
+                    Console.WriteLine("    No saved payment methods found for customer. Simulating selection of a new payment method.");
+                    Console.WriteLine("\n  4. Listing available merchant payment methods (PML)...");
+                    // Calling without ProfileId to see if API infers it from API key
+                    var pmlRequest = new MerchantPMLRequest { Country = "US", Currency = "USD", Amount = createPiRequest.Amount }; 
+                    MerchantPMLResponse? pmlResponse = await merchantService.ListAvailablePaymentMethodsAsync(pmlRequest); 
+                    
+                    if (pmlResponse != null && pmlResponse.PaymentMethods != null && pmlResponse.PaymentMethods.Any())
+                    {
+                        // Find the "card" payment method group
+                        var cardPaymentMethodGroup = pmlResponse.PaymentMethods.FirstOrDefault(pmg => pmg.PaymentMethodCategory?.ToLower() == "card");
+                        if (cardPaymentMethodGroup != null && cardPaymentMethodGroup.PaymentMethodTypes != null && cardPaymentMethodGroup.PaymentMethodTypes.Any())
+                        {
+                            // For simplicity, let's assume we're interested in the first detailed type under "card"
+                            // In a real UI, you might iterate through cardPaymentMethodGroup.PaymentMethodTypes 
+                            // to let the user pick a specific card brand or type if multiple are listed.
+                            var firstCardTypeDetails = cardPaymentMethodGroup.PaymentMethodTypes.First();
+                            Console.WriteLine($"    Simulating selection of new 'card' payment method (type: {firstCardTypeDetails.PaymentMethodType}) from PML.");
+                            confirmRequest.PaymentMethodData = new PaymentMethodData
+                            {
+                                Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "123" }
+                            };
+                        }
+                        else { PrintAndReturnError("    'card' payment method category or its types not found in merchant PML."); return; }
+                    }
+                    else { PrintAndReturnError("    Failed to retrieve merchant PML, or PML is empty or has no payment_methods list."); return; }
+                }
+
+                Console.WriteLine("\n  5. Confirming payment...");
+                paymentIntent = await paymentService.ConfirmPaymentAsync(paymentId, confirmRequest);
+                if (paymentIntent == null) { PrintAndReturnError("  Payment confirmation failed."); return; }
+                PrintPaymentDetails("  5. After Payment Confirmation", paymentIntent);
+
+                if (paymentIntent.Status == "requires_customer_action")
+                { Console.WriteLine($"    Payment requires customer action. Redirect to: {paymentIntent.NextAction?.RedirectToUrl}"); }
+                else if (paymentIntent.Status == "succeeded")
+                { Console.WriteLine("    Payment succeeded!"); }
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in full payment flow for customer {customerId}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in full payment flow for customer {customerId}"); }
         }
         
         static async Task<PaymentIntentResponse?> CreateAndConfirmPaymentForRefund(PaymentService paymentService)
@@ -414,6 +611,177 @@ namespace Hyperswitch.Sdk.Sample
             }
             catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in list customer payment methods flow"); }
             catch (Exception ex) { PrintGenericError(ex, "in list customer payment methods flow"); }
+        }
+
+        static async Task<string?> TestCreateCustomerAsync(CustomerService customerService)
+        {
+            Console.WriteLine("Attempting to create a new customer...");
+            var customerRequest = new CustomerRequest
+            {
+                Email = $"test.customer.{Guid.NewGuid().ToString().Substring(0, 8)}@example.com",
+                Name = "Test SDK Customer",
+                Phone = "9876543210",
+                PhoneCountryCode = "+91",
+                Description = "Customer created via SDK sample for testing.",
+                Address = new AddressDetails 
+                { 
+                    Line1 = "123 SDK Test St", City = "Testville", Country = "US", Zip = "12345",
+                    FirstName = "Test", LastName = "Customer"
+                },
+                Metadata = new Dictionary<string, string> { { "sdk_test_run", DateTime.UtcNow.ToString("o") } }
+            };
+
+            try
+            {
+                CustomerResponse? response = await customerService.CreateCustomerAsync(customerRequest);
+                if (response != null && !string.IsNullOrEmpty(response.CustomerId))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Customer created successfully! ID: {response.CustomerId}, Name: {response.Name}, Email: {response.Email}");
+                    Console.ResetColor();
+                    PrintCustomerDetails("Created Customer", response);
+                    return response.CustomerId;
+                }
+                else
+                {
+                    PrintAndReturnError("Customer creation failed or did not return a CustomerId.");
+                    return null;
+                }
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in create customer flow"); return null; }
+            catch (Exception ex) { PrintGenericError(ex, "in create customer flow"); return null; }
+        }
+
+        static async Task TestRetrieveCustomerAsync(CustomerService customerService, string customerId)
+        {
+            Console.WriteLine($"Attempting to retrieve customer with ID: {customerId}");
+            try
+            {
+                CustomerResponse? response = await customerService.RetrieveCustomerAsync(customerId);
+                if (response != null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Customer retrieved successfully! ID: {response.CustomerId}, Name: {response.Name}, Email: {response.Email}");
+                    Console.ResetColor();
+                    PrintCustomerDetails("Retrieved Customer", response);
+                }
+                else
+                {
+                     PrintAndReturnError($"Retrieve customer returned null for ID: {customerId}. This might indicate not found if API returns null on 404 for GET.");
+                }
+            }
+            catch (HyperswitchApiException apiEx) 
+            { 
+                if (apiEx.StatusCode == 404) PrintAndReturnError($"Customer with ID {customerId} not found (404).");
+                else PrintApiError(apiEx, $"in retrieve customer flow for ID: {customerId}"); 
+            }
+            catch (Exception ex) { PrintGenericError(ex, $"in retrieve customer flow for ID: {customerId}"); }
+        }
+
+        static async Task TestUpdateCustomerAsync(CustomerService customerService, string customerId)
+        {
+            Console.WriteLine($"Attempting to update customer with ID: {customerId}");
+            var updateRequest = new CustomerUpdateRequest
+            {
+                Name = "Test SDK Customer (Updated)",
+                Description = "Customer details updated via SDK sample.",
+                Metadata = new Dictionary<string, string> { { "update_timestamp", DateTime.UtcNow.ToString("o") } }
+            };
+            try
+            {
+                CustomerResponse? response = await customerService.UpdateCustomerAsync(customerId, updateRequest);
+                if (response != null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Customer updated successfully! ID: {response.CustomerId}, New Name: {response.Name}, New Desc: {response.Description}");
+                    Console.ResetColor();
+                    PrintCustomerDetails("Updated Customer", response);
+                }
+                else
+                {
+                    PrintAndReturnError($"Update customer returned null for ID: {customerId}.");
+                }
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in update customer flow for ID: {customerId}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in update customer flow for ID: {customerId}"); }
+        }
+        
+        static async Task TestListCustomersAsync(CustomerService customerService)
+        {
+            Console.WriteLine("Attempting to list customers...");
+            try
+            {
+                var listRequest = new CustomerListRequest { Limit = 10 }; 
+                List<CustomerResponse>? customers = await customerService.ListCustomersAsync(listRequest);
+                
+                if (customers != null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Retrieved {customers.Count} customer(s).");
+                    Console.ResetColor();
+                    int i = 0;
+                    foreach(var cust in customers) 
+                    {
+                        PrintCustomerDetails($"Listed Customer {++i}", cust);
+                        if (i >= 5 && customers.Count > 5) 
+                        {
+                            Console.WriteLine($"... and {customers.Count - 5} more customers.");
+                            break;
+                        }
+                    }
+                    if (customers.Count == 0) Console.WriteLine("No customers found.");
+                }
+                else
+                {
+                    PrintAndReturnError("List customers returned null.");
+                }
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in list customers flow"); }
+            catch (Exception ex) { PrintGenericError(ex, "in list customers flow"); }
+        }
+
+        static async Task TestDeleteCustomerAsync(CustomerService customerService, string customerId)
+        {
+            Console.WriteLine($"Attempting to delete customer with ID: {customerId}");
+            try
+            {
+                CustomerDeleteResponse? response = await customerService.DeleteCustomerAsync(customerId);
+                if (response != null && response.CustomerDeleted)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Customer with ID {response.CustomerId} deleted successfully. Payment methods deleted: {response.PaymentMethodsDeleted?.ToString() ?? "N/A"}");
+                    Console.ResetColor();
+                }
+                else
+                {
+                    PrintAndReturnError($"Failed to delete customer with ID {customerId}. Response: Deleted={response?.CustomerDeleted}, ID={response?.CustomerId}");
+                }
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in delete customer flow for ID: {customerId}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in delete customer flow for ID: {customerId}"); }
+        }
+
+        static void PrintCustomerDetails(string stage, CustomerResponse? customer)
+        {
+            if (customer == null) { PrintAndReturnError($"{stage}: Customer details are null."); return; }
+            Console.ForegroundColor = ConsoleColor.Magenta; 
+            Console.WriteLine($"{stage}:");
+            Console.WriteLine($"  ID: {customer.CustomerId}");
+            Console.WriteLine($"  Name: {customer.Name}");
+            Console.WriteLine($"  Email: {customer.Email}");
+            Console.WriteLine($"  Phone: {customer.PhoneCountryCode}{customer.Phone}");
+            Console.WriteLine($"  Description: {customer.Description}");
+            Console.WriteLine($"  Created At: {customer.CreatedAt}");
+            if (customer.Address != null)
+            {
+                Console.WriteLine($"  Address: {customer.Address.Line1}, {customer.Address.City}, {customer.Address.State} {customer.Address.Zip}, {customer.Address.Country}");
+            }
+            if (customer.Metadata != null && customer.Metadata.Any())
+            {
+                Console.WriteLine("  Metadata:");
+                foreach(var meta in customer.Metadata) { Console.WriteLine($"    {meta.Key}: {meta.Value}"); }
+            }
+            Console.ResetColor();
         }
 
         static void PrintPaymentDetails(string stage, PaymentIntentResponse? payment)
