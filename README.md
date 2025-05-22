@@ -1,34 +1,44 @@
 # Hyperswitch .NET SDK
 
-## Overview
+The official Hyperswitch .NET SDK provides .NET developers with a simple and convenient way to integrate their server-side applications with Hyperswitch APIs. This library allows you to easily manage payments, refunds, customers, and more, directly from your .NET code.
 
-The Hyperswitch .NET SDK provides a convenient way for .NET developers to integrate server-side with Hyperswitch APIs. This library simplifies interactions for managing payments, refunds, and listing customer payment methods within your .NET applications.
+## Table of Contents
 
-## Features
+- [Prerequisites](#prerequisites)
+- [Setup & Installation](#setup--installation)
+- [Getting Started](#getting-started)
+  - [Initialization](#initialization)
+- [Core Concepts](#core-concepts)
+  - [API Client](#api-client)
+  - [Service Classes](#service-classes)
+  - [Request & Response Models](#request--response-models)
+  - [Asynchronous Operations](#asynchronous-operations)
+- [API Reference & Usage Examples](#api-reference--usage-examples)
+  - [PaymentService](#paymentservice)
+  - [RefundService](#refundservice)
+  - [CustomerService](#customerservice)
+  - [MerchantService](#merchantservice)
+- [Error Handling](#error-handling)
+- [Sample Application](#sample-application)
+- [Contributing](#contributing)
+- [License](#license)
 
-*   **Typed Client:** A `HyperswitchClient` handles API communication, including authentication and request/response processing.
-*   **Service-Oriented Design:** Dedicated service classes (`PaymentService`, `RefundService`, `CustomerService`) for logical grouping of API operations.
-*   **Comprehensive API Coverage:**
-    *   **Payments:** Create, Retrieve/Sync Status, Confirm, Capture, Update, and Cancel.
-    *   **Refunds:** Create, Retrieve, Update, and List.
-    *   **Customer:** List saved payment methods.
-*   **Strongly-Typed Models:** C# classes for all API request and response objects, ensuring type safety and ease of use (located in `Hyperswitch.Sdk.Models`).
-*   **Asynchronous Operations:** All API calls are `async Task` based for non-blocking I/O.
-*   **Custom Exception Handling:** `HyperswitchApiException` provides detailed error information from the API.
+## Prerequisites
+
+*   **.NET 9.0 SDK or later:** This SDK targets `net9.0`. Ensure your development environment has the .NET 9.0 SDK installed. Your project should also target a compatible framework version (e.g., `net9.0`).
+*   **Hyperswitch Account & API Key:** You will need an active Hyperswitch account and your secret API key to make calls to the API. You can obtain these from your Hyperswitch dashboard.
 
 ## Setup & Installation
 
-This SDK is currently set up to be consumed as a direct project reference. If it were published as a NuGet package in the future, installation would typically be via `dotnet add package Hyperswitch.Sdk`.
-
-For now, to use this SDK in your .NET application:
+To use this SDK in your .NET application, you will need to reference it directly from its source code.
 
 1.  **Obtain the SDK Source Code:**
-    *   Ensure you have the complete source code for the `Hyperswitch.Sdk` project. This usually means cloning the repository that contains this SDK. The `Hyperswitch.Sdk` folder should be accessible from your consuming project.
+    *   Ensure you have the complete source code for the `Hyperswitch.Sdk` project (e.g., by cloning its repository or having it as part of your solution). The `Hyperswitch.Sdk` folder should be accessible from your consuming project.
 
 2.  **Add a Project Reference:**
     *   In your consuming .NET project (e.g., a .NET Console App, Web API, etc.), you need to add a reference to the `Hyperswitch.Sdk.csproj` file.
     *   **Using Visual Studio:**
-        1.  In Solution Explorer, right-click on your project's "Dependencies" (or "References" in older project types).
+        1.  In Solution Explorer, right-click on your project's "Dependencies".
         2.  Select "Add Project Reference..."
         3.  In the Reference Manager dialog, click "Browse..." and navigate to the location of the `Hyperswitch.Sdk` folder, then select the `Hyperswitch.Sdk.csproj` file. Click "OK".
     *   **Using .NET CLI:**
@@ -36,242 +46,200 @@ For now, to use this SDK in your .NET application:
         2.  Navigate to the directory of your consuming project (the one that will use the SDK).
         3.  Run the following command, adjusting the path to `Hyperswitch.Sdk.csproj` as necessary relative to your project's location:
             ```bash
-            dotnet add reference ../Hyperswitch.Sdk/Hyperswitch.Sdk.csproj
+            dotnet add reference path/to/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj
             ```
-            *(This example assumes your consuming project and the `Hyperswitch.Sdk` folder are sibling directories within a common parent folder.)*
+            *(Example: `dotnet add reference ../Hyperswitch.Sdk/Hyperswitch.Sdk.csproj` if your consuming project and the `Hyperswitch.Sdk` folder are sibling directories.)*
 
 3.  **Target Framework:**
-    *   This SDK targets `.NET 9.0`. Ensure your consuming project is compatible (e.g., also targets .NET 9.0 or a compatible newer version). If needed, you might have to adjust the target framework in `Hyperswitch.Sdk.csproj` and recompile the SDK.
+    *   This SDK targets `.NET 9.0`. Ensure your consuming project is compatible.
 
-Once the reference is added, you can use the SDK's namespaces, classes, and methods in your project by adding `using` statements, for example:
+After adding the project reference, you can use the SDK's namespaces, classes, and methods in your project by adding `using` statements:
 ```csharp
 using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Services;
 using Hyperswitch.Sdk.Models;
+using Hyperswitch.Sdk.Exceptions; // For HyperswitchApiException
 ```
+The SDK source code includes XML documentation comments (`/// <summary>...`) which can provide IntelliSense in your IDE if your project and the SDK project are part of the same solution.
 
-## Core Concepts
+## Getting Started
 
-*   **`HyperswitchClient`:** This is the central component. You instantiate it with your Hyperswitch API base URL (e.g., `https://sandbox.hyperswitch.io`) and your secret API key. It manages the underlying `HttpClient` and authentication headers.
-*   **Service Classes:** For each main API resource (Payments, Refunds, Customers), there's a corresponding service class:
-    *   `PaymentService`
-    *   `RefundService`
-    *   `CustomerService`
-    These services take an instance of `HyperswitchClient` in their constructor and provide methods for specific API endpoints (e.g., `paymentService.CreateAsync(...)`).
-*   **Models:** All data sent to or received from the API is structured using C# classes found in the `Hyperswitch.Sdk.Models` namespace. These provide IntelliSense and type checking.
+### Initialization
 
-## Usage Examples
-
-### 1. Initialization
-
-First, include the necessary `using` statements and initialize the `HyperswitchClient` and the service(s) you intend to use:
+To begin using the SDK, you need to initialize the `HyperswitchClient` with your API key and the base URL for the Hyperswitch API environment you are targeting. Then, you can instantiate the service classes you need.
 
 ```csharp
 using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Services;
-using Hyperswitch.Sdk.Models;      // For request/response objects
-using Hyperswitch.Sdk.Exceptions;  // For HyperswitchApiException
-using System;                       // For Console.WriteLine
-using System.Threading.Tasks;       // For async Task
-using System.Collections.Generic; // For Dictionary, List
+// ... other necessary usings ...
 
-// ... within your application class or method ...
-
-public class MyHyperswitchIntegrator
+public class MyHyperswitchIntegration
 {
-    private readonly PaymentService _paymentService;
-    private readonly RefundService _refundService;
-    private readonly CustomerService _customerService;
+    private readonly HyperswitchClient _apiClient;
+    public readonly PaymentService Payments;
+    public readonly RefundService Refunds;
+    public readonly CustomerService Customers;
+    public readonly MerchantService Merchant;
 
-    public MyHyperswitchIntegrator(string apiKey, string baseUrl = "https://sandbox.hyperswitch.io")
+    public MyHyperswitchIntegration(string apiKey, string hyperswitchApiBaseUrl = "https://sandbox.hyperswitch.io")
     {
-        var apiClient = new HyperswitchClient(baseUrl, apiKey);
-        _paymentService = new PaymentService(apiClient);
-        _refundService = new RefundService(apiClient);
-        _customerService = new CustomerService(apiClient);
+        // It's recommended to fetch the API key from a secure configuration source, not hardcode it.
+        _apiClient = new HyperswitchClient(hyperswitchApiBaseUrl, apiKey);
+        Payments = new PaymentService(_apiClient);
+        Refunds = new RefundService(_apiClient);
+        Customers = new CustomerService(_apiClient);
+        Merchant = new MerchantService(_apiClient);
     }
 
-    // Example method to use a service
-    public async Task ExampleCreatePaymentAsync()
+    // Example method
+    public async Task CreateSomePayment()
     {
         // See API call examples below
     }
 }
+
+// How to use it in your application:
+// var hyperswitchService = new MyHyperswitchIntegration("YOUR_API_KEY_HERE"); 
+// await hyperswitchService.CreateSomePayment();
 ```
+**Note:** Always use the Sandbox URL (`https://sandbox.hyperswitch.io`) for testing and development. Replace it with the live URL for production environments.
 
-### 2. Making API Calls
+## Core Concepts
 
-All service methods are asynchronous.
+### API Client
+*   **`HyperswitchClient`**: This is the central class responsible for making HTTP requests to the Hyperswitch API. It handles authentication (using your API key), request serialization, and response deserialization.
 
-#### Example: Create a Payment
+### Service Classes
+The SDK is organized into service classes, each corresponding to a major resource:
+*   `PaymentService`
+*   `RefundService`
+*   `CustomerService`
+*   `MerchantService`
 
-```csharp
-public async Task<PaymentIntentResponse?> CreatePaymentExampleAsync()
-{
-    var paymentRequest = new PaymentIntentRequest
-    {
-        Amount = 2000, // e.g., 20.00 USD (amount in cents)
-        Currency = "USD",
-        Email = "customer@example.com",
-        Description = "Order #12345",
-        Confirm = true,             // Create and confirm in one go
-        CaptureMethod = "automatic",  // Auto-capture after successful authentication
-        PaymentMethod = "card",
-        PaymentMethodType = "credit",
-        PaymentMethodData = new PaymentMethodData
+### Request & Response Models
+All API operations use strongly-typed C# classes for request parameters and response data, located in `Hyperswitch.Sdk.Models`.
+
+### Asynchronous Operations
+All API methods are asynchronous (`async Task` or `async Task<T>`). Use `await` for non-blocking calls.
+
+## API Reference & Usage Examples
+
+Below is a summary of available services and key methods. Refer to the source code (with XML comments) or official Hyperswitch API documentation for full details on request/response models.
+
+---
+
+### `PaymentService`
+Manages payment intents.
+
+*   **`CreateAsync(PaymentIntentRequest request)`**: Creates a payment.
+    *   Example:
+        ```csharp
+        var paymentRequest = new PaymentIntentRequest
         {
-            Card = new CardDetails
-            {
-                CardNumber = "4917610000000000", // Use a test card number
-                CardExpiryMonth = "12",
-                CardExpiryYear = "2030",
-                CardCvc = "123"
-            }
-        },
-        ReturnUrl = "https://example.com/return_url_for_3ds_redirect"
-        // Add other fields like Billing, Shipping, BrowserInfo as needed
-    };
+            Amount = 2000, // 20.00 (smallest currency unit)
+            Currency = "USD",
+            Confirm = true, // Attempt to confirm immediately
+            // ProfileId = "YOUR_PROFILE_ID_HERE", // Optional, if needed
+            // ... other parameters like PaymentMethodData, CustomerId, ReturnUrl
+        };
+        PaymentIntentResponse? payment = await Payments.CreateAsync(paymentRequest);
+        ```
+*   **`RetrieveAsync(string paymentId)`**: Gets payment details.
+*   **`SyncPaymentStatusAsync(string paymentId, string? clientSecret = null, bool forceSync = false)`**: Gets latest payment status.
+*   **`ConfirmPaymentAsync(string paymentId, PaymentConfirmRequest? confirmRequest = null)`**: Confirms a payment.
+*   **`CapturePaymentAsync(string paymentId, PaymentCaptureRequest? captureRequest = null)`**: Captures an authorized payment.
+*   **`UpdatePaymentAsync(string paymentId, PaymentUpdateRequest updateRequest)`**: Updates a payment.
+*   **`CancelPaymentAsync(string paymentId, PaymentCancelRequest? cancelRequest = null)`**: Voids/cancels a payment.
 
-    try
-    {
-        PaymentIntentResponse? paymentResponse = await _paymentService.CreateAsync(paymentRequest);
+---
 
-        if (paymentResponse != null)
+### `RefundService`
+Manages refunds.
+
+*   **`CreateRefundAsync(RefundCreateRequest request)`**: Creates a refund.
+    *   Example:
+        ```csharp
+        var refundRequest = new RefundCreateRequest
         {
-            Console.WriteLine($"Payment Status: {paymentResponse.Status}");
-            Console.WriteLine($"Payment ID: {paymentResponse.PaymentId}");
+            PaymentId = "pay_xxxxxxxxxxxx",
+            Amount = 500, // Refund 5.00 (smallest currency unit)
+            Reason = "OTHER" // Valid reasons: OTHER, RETURN, DUPLICATE, FRAUD, CUSTOMER_REQUEST
+        };
+        RefundResponse? refund = await Refunds.CreateRefundAsync(refundRequest);
+        ```
+*   **`RetrieveRefundAsync(string refundId)`**: Gets refund details.
+*   **`UpdateRefundAsync(string refundId, RefundUpdateRequest request)`**: Updates a refund.
+*   **`ListRefundsAsync(RefundListRequest? request = null)`**: Lists refunds.
 
-            if (paymentResponse.Status == "requires_customer_action" && !string.IsNullOrEmpty(paymentResponse.NextAction?.RedirectToUrl))
-            {
-                Console.WriteLine($"Redirect customer to: {paymentResponse.NextAction.RedirectToUrl}");
-                // In a web application, you would redirect the user's browser to this URL.
-            }
-            else if (paymentResponse.Status == "succeeded")
-            {
-                Console.WriteLine("Payment successful!");
-            }
-            // Handle other statuses as needed
-            return paymentResponse;
-        }
-        else
-        {
-            Console.WriteLine("Failed to create payment or response was null.");
-            return null;
-        }
-    }
-    catch (HyperswitchApiException apiEx)
-    {
-        Console.WriteLine($"API Error creating payment: {apiEx.Message}");
-        Console.WriteLine($"  Status Code: {apiEx.StatusCode}");
-        if (apiEx.ErrorDetails?.Error != null)
-        {
-            Console.WriteLine($"  API Code: {apiEx.ErrorDetails.Error.Code}");
-            Console.WriteLine($"  API Message: {apiEx.ErrorDetails.Error.Message}");
-        }
-        Console.WriteLine($"  Raw Response: {apiEx.ResponseContent}");
-        return null;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-        return null;
-    }
-}
-```
+---
 
-### 3. Error Handling
+### `CustomerService`
+Manages customers and their payment methods.
 
-API errors will throw a `HyperswitchApiException`. Catch this exception to handle errors gracefully:
+*   **`CreateCustomerAsync(CustomerRequest request)`**: Creates a customer.
+*   **`RetrieveCustomerAsync(string customerId)`**: Gets customer details.
+*   **`UpdateCustomerAsync(string customerId, CustomerUpdateRequest request)`**: Updates a customer.
+*   **`DeleteCustomerAsync(string customerId)`**: Deletes a customer.
+*   **`ListCustomersAsync(CustomerListRequest? request = null)`**: Lists customers.
+*   **`ListPaymentMethodsAsync(string customerId)`**: Lists a customer's saved payment methods.
 
+---
+
+### `MerchantService`
+Merchant-level operations.
+
+*   **`ListAvailablePaymentMethodsAsync(MerchantPMLRequest? request = null)`**: Lists merchant's available payment methods.
+    *   Uses `GET /account/payment_methods`.
+    *   **Note:** Based on testing, this endpoint might require a specific `profile_id` to be implicitly available via your API key or explicitly sent if your account has multiple profiles. If you encounter a "Profile id not found" error, ensure your API key context is correct or try providing a `ProfileId` in the `MerchantPMLRequest`.
+    *   Example:
+        ```csharp
+        var pmlRequest = new MerchantPMLRequest 
+        { 
+            // ProfileId = "YOUR_PROFILE_ID_HERE", // May be required depending on API key setup
+            // Country = "US", 
+            // Currency = "USD" 
+        };
+        MerchantPMLResponse? pml = await Merchant.ListAvailablePaymentMethodsAsync(pmlRequest);
+        if (pml?.PaymentMethods != null) { /* Process available payment methods */ }
+        ```
+
+---
+
+## Error Handling
+
+API errors throw a `HyperswitchApiException`.
+*   `StatusCode`: HTTP status code.
+*   `ResponseContent`: Raw JSON error response.
+*   `ErrorDetails`: Deserialized `ErrorResponse` object (`Error.Code`, `Error.Message`).
+
+**Example:**
 ```csharp
 try
 {
-    // Make an API call, e.g., await _paymentService.RetrieveAsync("invalid_payment_id");
+    // API call
 }
 catch (HyperswitchApiException apiEx)
 {
-    Console.WriteLine($"An API error occurred:");
-    Console.WriteLine($"  HTTP Status Code: {apiEx.StatusCode}");
-    Console.WriteLine($"  Raw Response Body: {apiEx.ResponseContent}"); // Contains the JSON error from Hyperswitch
-
+    Console.WriteLine($"API Error: {apiEx.Message} (Status: {apiEx.StatusCode})");
     if (apiEx.ErrorDetails?.Error != null)
     {
-        Console.WriteLine($"  Hyperswitch Error Code: {apiEx.ErrorDetails.Error.Code}");
-        Console.WriteLine($"  Hyperswitch Error Message: {apiEx.ErrorDetails.Error.Message}");
+        Console.WriteLine($"  Code: {apiEx.ErrorDetails.Error.Code}, Details: {apiEx.ErrorDetails.Error.Message}");
     }
-}
-catch (System.Net.Http.HttpRequestException httpEx)
-{
-    // Handle network errors or issues before a response is received
-    Console.WriteLine($"Network error: {httpEx.Message}");
-}
-catch (Exception ex)
-{
-    // Handle other unexpected errors
-    Console.WriteLine($"An unexpected error: {ex.Message}");
 }
 ```
 
-## Available Services and Key Operations
+## Sample Application
 
-### `PaymentService`
-*   `CreateAsync(PaymentIntentRequest request)`: Creates a new payment.
-*   `RetrieveAsync(string paymentId)`: Retrieves details of a specific payment.
-*   `SyncPaymentStatusAsync(string paymentId, string? clientSecret = null, bool forceSync = false)`: Retrieves the latest status, optionally forcing a sync.
-*   `ConfirmPaymentAsync(string paymentId, PaymentConfirmRequest? confirmRequest = null)`: Confirms a payment.
-*   `CapturePaymentAsync(string paymentId, PaymentCaptureRequest? captureRequest = null)`: Captures an authorized payment.
-*   `UpdatePaymentAsync(string paymentId, PaymentUpdateRequest updateRequest)`: Updates details of a payment.
-*   `CancelPaymentAsync(string paymentId, PaymentCancelRequest? cancelRequest = null)`: Cancels (voids) an authorized payment.
+The SDK includes a sample console application (`Hyperswitch.Sdk.Sample`) demonstrating various SDK features.
 
-### `RefundService`
-*   `CreateRefundAsync(RefundCreateRequest request)`: Creates a refund for a payment.
-*   `RetrieveRefundAsync(string refundId)`: Retrieves details of a specific refund.
-*   `UpdateRefundAsync(string refundId, RefundUpdateRequest request)`: Updates details of a refund.
-*   `ListRefundsAsync(RefundListRequest? request = null)`: Lists refunds, with optional filters (uses `POST /refunds/list`).
+**To run the sample:**
 
-### `CustomerService`
-*   `ListPaymentMethodsAsync(string customerId)`: Lists saved payment methods for a customer (uses `GET /customers/{customerId}/payment_methods`).
+1.  Navigate to `Hyperswitch.Sdk.Sample` directory.
+2.  Open `Program.cs` and replace `YOUR_API_KEY_HERE` (placeholder for `apiKey` variable) with your actual Hyperswitch secret API key.
+3.  Run: `dotnet run`
 
-Refer to the method signatures within each service class and the corresponding model classes in `Hyperswitch.Sdk.Models` for detailed request and response structures.
+## Contributing
+For contributions, please contact the Hyperswitch team or refer to any contribution guidelines provided with the source repository.
 
-## Running the Sample Application (Testing the SDK Flows)
-
-The SDK includes a sample console application (`Hyperswitch.Sdk.Sample`) that demonstrates how to use the various SDK features and tests all implemented API flows.
-
-To run the sample application:
-
-1.  **Navigate to the Sample Project Directory:**
-    Open your terminal or command prompt and navigate to the `Hyperswitch.Sdk.Sample` directory within the main SDK folder.
-    ```bash
-    cd path/to/your/server-side-sdk/Hyperswitch.Sdk.Sample
-    ```
-    *(Replace `path/to/your/server-side-sdk/` with the actual path to where you have the SDK projects.)*
-
-2.  **Configure API Key (Important):**
-    *   Open the `Hyperswitch.Sdk.Sample/Program.cs` file.
-    *   Locate the following line in the `Main` method:
-        ```csharp
-        string apiKey = "API_KEY"; 
-        ```
-    *   **Replace `"API_KEY"` with your actual Hyperswitch secret API key for the sandbox environment.** The sample is pre-configured to use the Hyperswitch sandbox URL (`https://sandbox.hyperswitch.io`).
-
-3.  **Build and Run:**
-    *   Once the API key is configured, you can build and run the sample application using the .NET CLI:
-        ```bash
-        dotnet run
-        ```
-    *   Alternatively, if you prefer to build first and then run:
-        ```bash
-        dotnet build
-        dotnet run --no-build
-        ```
-    *   You can also run it directly from an IDE like Visual Studio by setting `Hyperswitch.Sdk.Sample` as the startup project and running it.
-
-4.  **Observe Output:**
-    *   The console will display the output of each test scenario, showing the API requests being made (implicitly) and the responses received.
-    *   This includes creating payments, confirming them, attempting refunds, listing refunds, listing customer payment methods, etc.
-
-5.  **Notes on Test Scenarios:**
-    *   **`requires_customer_action`:** Many payment scenarios in the sandbox environment will result in a `requires_customer_action` status. This is expected and simulates flows where the user needs to authenticate (e.g., 3D Secure). To fully test subsequent actions like capture or refund on these payments, you would typically need to complete the action by visiting the `NextAction.RedirectToUrl` provided in the console output in a browser.
-    *   **Refund Prerequisite:** Scenario 6 (Refund Payment) attempts to create a payment that should ideally become `succeeded` quickly for refund testing. If it remains in `requires_customer_action`, the refund test for that specific payment will be skipped.
-    *   **Customer ID for Listing Payment Methods:** Scenario 9 (List Customer Payment Methods) uses a hardcoded `customer_id`. If this customer does not exist in your sandbox or has no saved payment methods, this specific test will show a 404 error or an empty list, respectively. This is a data-dependent test.
+## License
+This SDK is licensed under the MIT License.

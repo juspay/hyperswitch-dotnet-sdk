@@ -124,9 +124,17 @@ namespace Hyperswitch.Sdk.Models
         [JsonPropertyName("payment_link")]
         public bool? PaymentLink { get; set; }
 
+        /// <summary>
+        /// Indicates if this payment method should be saved for future use by the customer.
+        /// Common values: "on_session", "off_session".
+        /// Requires customer_id to be set.
+        /// </summary>
+        [JsonPropertyName("setup_future_usage")]
+        public string? SetupFutureUsage { get; set; }
+
 
         // Add other fields as per Hyperswitch documentation:
-        // e.g. statement_descriptor, statement_descriptor_suffix, setup_future_usage etc.
+        // e.g. statement_descriptor, statement_descriptor_suffix etc.
     }
 
     public class PaymentMethodData

@@ -53,6 +53,15 @@ namespace Hyperswitch.Sdk
             return await HandleResponse<TResponse>(response);
         }
 
+        internal async Task<TResponse?> DeleteAsync<TResponse>(string url) where TResponse : class // Added class constraint for nullable TResponse
+        {
+            var response = await _httpClient.DeleteAsync(url);
+            // HandleResponse might need adjustment if Delete typically returns 204 No Content
+            // and TResponse is expected to be something specific like CustomerDeleteResponse.
+            // If 204, responseContent will be empty.
+            return await HandleResponse<TResponse>(response); 
+        }
+
         private async Task<TResponse> HandleResponse<TResponse>(HttpResponseMessage response)
         {
             var responseContent = await response.Content.ReadAsStringAsync();

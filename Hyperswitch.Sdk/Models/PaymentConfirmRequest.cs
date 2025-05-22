@@ -43,6 +43,14 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("browser_info")]
         public BrowserInfo? BrowserInfo { get; set; }
+
+        /// <summary>
+        /// The token or ID of a saved payment method to be used for this confirmation.
+        /// Use this if the customer selects a previously saved payment method.
+        /// If this is provided, PaymentMethodData should typically be null.
+        /// </summary>
+        [JsonPropertyName("payment_method_token")] // Assuming this field name
+        public string? PaymentMethodToken { get; set; }
         
         // Note: ClientSecret was removed from this request model as it caused API errors.
         // AuthenticationType is also typically set at create, not confirm, unless API specifies otherwise.

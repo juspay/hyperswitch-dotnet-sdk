@@ -4,6 +4,24 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>Hyperswitch.Sdk</PackageId>
+    <Version>1.0.0-alpha</Version>
+    <Authors>Hyperswitch Team</Authors> <!-- Placeholder - Update as needed -->
+    <Company>Hyperswitch</Company> <!-- Placeholder - Update as needed -->
+    <Description>Official .NET SDK for interacting with Hyperswitch APIs, providing methods for payments, refunds, customer management, and more.</Description>
+    <PackageTags>hyperswitch payment sdk fintech api finance</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression> <!-- Or your chosen license -->
+    <PackageProjectUrl>https://hyperswitch.io/</PackageProjectUrl> <!-- Placeholder - Update with actual project URL -->
+    <RepositoryUrl>https://github.com/juspay/hyperswitch-dotnet-sdk</RepositoryUrl> <!-- Placeholder - Update with actual repo URL -->
+    <RepositoryType>git</RepositoryType>
+    
+    <!-- Generate XML documentation file for NuGet package -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Optional: Suppress warning for missing XML comments if not all public members are documented yet -->
+    <!-- <NoWarn>$(NoWarn);CS1591</NoWarn> -->
+    
   </PropertyGroup>
 
 </Project>
