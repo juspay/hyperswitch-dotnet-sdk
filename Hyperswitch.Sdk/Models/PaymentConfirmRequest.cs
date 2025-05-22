@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the request parameters for confirming a payment.
+    /// </summary>
     public class PaymentConfirmRequest
     {
         /// <summary>

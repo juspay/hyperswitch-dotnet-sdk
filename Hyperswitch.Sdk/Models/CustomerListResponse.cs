@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the response from listing customers, including pagination details.
+    /// </summary>
     public class CustomerListResponse
     {
         /// <summary>

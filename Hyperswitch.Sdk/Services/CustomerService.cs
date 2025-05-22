@@ -3,12 +3,19 @@ using Hyperswitch.Sdk.Models;
 
 namespace Hyperswitch.Sdk.Services
 {
+    /// <summary>
+    /// Provides methods for interacting with the Hyperswitch Customer API.
+    /// </summary>
     public class CustomerService
     {
         private readonly HyperswitchClient _client;
         private const string CustomersBaseUrl = "/customers"; // For single customer ops by ID
         private const string CustomerListUrl = "/customers/list"; // For listing customers
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CustomerService"/> class.
+        /// </summary>
+        /// <param name="client">The <see cref="HyperswitchClient"/> to use for API calls.</param>
         public CustomerService(HyperswitchClient client)
         {
             _client = client;

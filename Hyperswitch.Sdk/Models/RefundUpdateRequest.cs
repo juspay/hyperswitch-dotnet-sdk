@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the request parameters for updating a refund.
+    /// </summary>
     public class RefundUpdateRequest
     {
         /// <summary>

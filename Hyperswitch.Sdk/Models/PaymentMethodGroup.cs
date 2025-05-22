@@ -3,6 +3,10 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents a group of payment methods, categorized by a general type (e.g., "card"), 
+    /// and containing specific payment method types within that category.
+    /// </summary>
     public class PaymentMethodGroup
     {
         /// <summary>

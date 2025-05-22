@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the response object for a refund.
+    /// </summary>
     public class RefundResponse
     {
         /// <summary>
@@ -54,6 +57,9 @@ namespace Hyperswitch.Sdk.Models
         [JsonPropertyName("updated_at")]
         public string? UpdatedAt { get; set; } // Assuming ISO 8601 string
 
+        /// <summary>
+        /// Gets or sets a set of key-value pairs that can be attached to the object.
+        /// </summary>
         [JsonPropertyName("metadata")]
         public Dictionary<string, string>? Metadata { get; set; }
 
@@ -75,12 +81,21 @@ namespace Hyperswitch.Sdk.Models
         [JsonPropertyName("merchant_refund_id")]
         public string? MerchantRefundId { get; set; }
         
+        /// <summary>
+        /// Gets or sets the connector used for the refund.
+        /// </summary>
         [JsonPropertyName("connector")]
         public string? Connector { get; set; }
 
+        /// <summary>
+        /// Gets or sets the Profile ID associated with this refund.
+        /// </summary>
         [JsonPropertyName("profile_id")]
         public string? ProfileId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the Merchant Connector ID used for this refund.
+        /// </summary>
         [JsonPropertyName("merchant_connector_id")]
         public string? MerchantConnectorId { get; set; }
         

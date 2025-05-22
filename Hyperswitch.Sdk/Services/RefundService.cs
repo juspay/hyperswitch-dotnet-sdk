@@ -3,12 +3,19 @@ using Hyperswitch.Sdk.Models;
 
 namespace Hyperswitch.Sdk.Services
 {
+    /// <summary>
+    /// Provides methods for interacting with the Hyperswitch Refund API.
+    /// </summary>
     public class RefundService
     {
         private readonly HyperswitchClient _client;
         private const string RefundsUrl = "/refunds"; // Base path for refund operations (create, retrieve by ID, update by ID)
         private const string RefundListUrl = "/refunds/list"; // Path for listing refunds
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RefundService"/> class.
+        /// </summary>
+        /// <param name="client">The <see cref="HyperswitchClient"/> to use for API calls.</param>
         public RefundService(HyperswitchClient client)
         {
             _client = client;

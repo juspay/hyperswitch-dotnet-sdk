@@ -4,12 +4,20 @@ using System.Collections.Generic; // Required for List<string> in queryParams
 
 namespace Hyperswitch.Sdk.Services
 {
+    /// <summary>
+    /// Provides methods for interacting with merchant-level Hyperswitch APIs,
+    /// such as listing available payment methods.
+    /// </summary>
     public class MerchantService
     {
         private readonly HyperswitchClient _client;
         // Corrected endpoint based on user-provided cURL.
         private const string AccountPaymentMethodsUrl = "/account/payment_methods"; 
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MerchantService"/> class.
+        /// </summary>
+        /// <param name="client">The <see cref="HyperswitchClient"/> to use for API calls.</param>
         public MerchantService(HyperswitchClient client)
         {
             _client = client;

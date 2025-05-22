@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the response from a customer deletion operation.
+    /// </summary>
     public class CustomerDeleteResponse
     {
         /// <summary>

@@ -3,11 +3,18 @@ using Hyperswitch.Sdk.Models;
 
 namespace Hyperswitch.Sdk.Services
 {
+    /// <summary>
+    /// Provides methods for interacting with the Hyperswitch Payment Intent API.
+    /// </summary>
     public class PaymentService
     {
         private readonly HyperswitchClient _client;
         private const string PaymentsUrl = "/payments"; // Base path for payments API
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PaymentService"/> class.
+        /// </summary>
+        /// <param name="client">The <see cref="HyperswitchClient"/> to use for API calls.</param>
         public PaymentService(HyperswitchClient client)
         {
             _client = client;

@@ -10,19 +10,35 @@ using Hyperswitch.Sdk.Models;
 
 namespace Hyperswitch.Sdk
 {
+    /// <summary>
+    /// Specifies the type of API key to use for an operation.
+    /// </summary>
     public enum ApiKeyType 
     {
+        /// <summary>
+        /// The secret API key, used for most server-to-server operations.
+        /// </summary>
         Secret,
+        /// <summary>
+        /// The publishable API key, used for client-side or specific server-side operations that emulate client behavior.
+        /// </summary>
         Publishable
     }
 
+    /// <summary>
+    /// The main client for interacting with the Hyperswitch API.
+    /// </summary>
     public class HyperswitchClient : IDisposable
     {
         private readonly HttpClient _httpClient;
         private readonly string _secretKey;
-        private readonly string? _publishableKey;
+        private readonly string _publishableKey; // Made mandatory
         private static readonly string DefaultBaseUrl = "https://sandbox.hyperswitch.io";
 
+        /// <summary>
+        /// Gets the default Profile ID configured for this client instance.
+        /// This Profile ID will be used for API calls if not overridden in the specific request.
+        /// </summary>
         internal string? DefaultProfileId { get; private set; }
 
         private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
@@ -32,10 +48,20 @@ namespace Hyperswitch.Sdk
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
-        public HyperswitchClient(string secretKey, string? publishableKey = null, string? defaultProfileId = null, string? baseUrl = null)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HyperswitchClient"/> class.
+        /// </summary>
+        /// <param name="secretKey">Your Hyperswitch Secret API key.</param>
+        /// <param name="publishableKey">Your Hyperswitch Publishable API key.</param>
+        /// <param name="defaultProfileId">An optional default Profile ID to use for requests if not specified otherwise.</param>
+        /// <param name="baseUrl">The base URL for the Hyperswitch API. Defaults to the sandbox environment.</param>
+        /// <exception cref="ArgumentNullException">Thrown if secretKey or publishableKey is null or empty.</exception>
+        public HyperswitchClient(string secretKey, string publishableKey, string? defaultProfileId = null, string? baseUrl = null)
         {
             if (string.IsNullOrWhiteSpace(secretKey))
                 throw new ArgumentNullException(nameof(secretKey), "Secret API key cannot be null or empty.");
+            if (string.IsNullOrWhiteSpace(publishableKey)) // Ensured mandatory
+                throw new ArgumentNullException(nameof(publishableKey), "Publishable API key cannot be null or empty.");
 
             _secretKey = secretKey;
             _publishableKey = publishableKey;
@@ -52,8 +78,7 @@ namespace Hyperswitch.Sdk
         {
             if (keyType == ApiKeyType.Publishable)
             {
-                if (string.IsNullOrWhiteSpace(_publishableKey))
-                    throw new InvalidOperationException("Publishable key requested but not configured in HyperswitchClient.");
+                // Constructor now guarantees _publishableKey is not null or whitespace.
                 return _publishableKey;
             }
             return _secretKey; // Default to secret key
@@ -149,6 +174,9 @@ namespace Hyperswitch.Sdk
                 errorResponse);
         }
 
+        /// <summary>
+        /// Releases the unmanaged resources and disposes of the managed resources used by the <see cref="HttpClient"/>.
+        /// </summary>
         public void Dispose()
         {
             _httpClient?.Dispose();

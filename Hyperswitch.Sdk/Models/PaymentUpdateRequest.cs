@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models
 {
+    /// <summary>
+    /// Represents the request parameters for updating a payment intent.
+    /// </summary>
     public class PaymentUpdateRequest
     {
         /// <summary>
@@ -43,6 +46,9 @@ namespace Hyperswitch.Sdk.Models
         [JsonPropertyName("phone")]
         public string? Phone { get; set; }
         
+        /// <summary>
+        /// Gets or sets the country code for the customer's phone number.
+        /// </summary>
         [JsonPropertyName("phone_country_code")]
         public string? PhoneCountryCode { get; set; }
         
