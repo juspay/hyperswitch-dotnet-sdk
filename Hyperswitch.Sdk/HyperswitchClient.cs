@@ -20,7 +20,7 @@ namespace Hyperswitch.Sdk
     {
         private readonly HttpClient _httpClient;
         private readonly string _secretKey;
-        private readonly string? _publishableKey;
+        private readonly string _publishableKey; // Changed from string?
         private static readonly string DefaultBaseUrl = "https://sandbox.hyperswitch.io";
 
         internal string? DefaultProfileId { get; private set; }
@@ -32,10 +32,12 @@ namespace Hyperswitch.Sdk
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
-        public HyperswitchClient(string secretKey, string? publishableKey = null, string? defaultProfileId = null, string? baseUrl = null)
+        public HyperswitchClient(string secretKey, string publishableKey, string? defaultProfileId = null, string? baseUrl = null)
         {
             if (string.IsNullOrWhiteSpace(secretKey))
                 throw new ArgumentNullException(nameof(secretKey), "Secret API key cannot be null or empty.");
+            if (string.IsNullOrWhiteSpace(publishableKey)) // Added check
+                throw new ArgumentNullException(nameof(publishableKey), "Publishable API key cannot be null or empty.");
 
             _secretKey = secretKey;
             _publishableKey = publishableKey;
@@ -52,8 +54,7 @@ namespace Hyperswitch.Sdk
         {
             if (keyType == ApiKeyType.Publishable)
             {
-                if (string.IsNullOrWhiteSpace(_publishableKey))
-                    throw new InvalidOperationException("Publishable key requested but not configured in HyperswitchClient.");
+                // No need to check for null/whitespace here anymore, constructor guarantees it.
                 return _publishableKey;
             }
             return _secretKey; // Default to secret key

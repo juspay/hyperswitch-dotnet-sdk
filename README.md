@@ -28,7 +28,7 @@ The official Hyperswitch .NET SDK provides .NET developers with a simple and con
 *   **.NET 9.0 SDK or later:** This SDK targets `net9.0`. Ensure your development environment has the .NET 9.0 SDK installed. Your project should also target a compatible framework version (e.g., `net9.0`).
 *   **Hyperswitch Account & API Keys:** You will need an active Hyperswitch account.
     *   **Secret API Key:** Required for most server-side operations.
-    *   **Publishable API Key:** Required for specific client-side oriented operations if you intend to use them via the SDK (e.g., listing payment methods using a `client_secret`).
+    *   **Publishable API Key:** Required for SDK initialization and specific client-side oriented operations (e.g., listing payment methods using a `client_secret`).
     *   **Profile ID:** You might need one or more Profile IDs configured in your Hyperswitch account. The SDK allows setting a default Profile ID.
     *   Obtain these from your Hyperswitch dashboard.
 
@@ -60,7 +60,7 @@ The SDK source code includes XML documentation comments for IntelliSense.
 
 ### Initialization
 
-To begin using the SDK, initialize the `HyperswitchClient`. You must provide your **Secret API Key**. Optionally, you can also provide a **Publishable API Key** (if you intend to use client-side flows like PML with a `client_secret`) and a **Default Profile ID** (which will be used if a `ProfileId` is not specified in individual requests that support it).
+To begin using the SDK, initialize the `HyperswitchClient`. You must provide your **Secret API Key** and your **Publishable API Key**. Optionally, you can also provide a **Default Profile ID** (which will be used if a `ProfileId` is not specified in individual requests that support it).
 
 ```csharp
 using Hyperswitch.Sdk;
@@ -75,12 +75,12 @@ public class MyHyperswitchService
     public readonly CustomerService Customers;
     public readonly MerchantService Merchant;
 
-    public MyHyperswitchService(string secretKey, string? publishableKey, string? defaultProfileId, string hyperswitchApiBaseUrl = "https://sandbox.hyperswitch.io")
+    public MyHyperswitchService(string secretKey, string publishableKey, string? defaultProfileId, string hyperswitchApiBaseUrl = "https://sandbox.hyperswitch.io")
     {
         // It's recommended to fetch API keys and Profile ID from a secure configuration source.
         _apiClient = new HyperswitchClient(
             secretKey: secretKey, 
-            publishableKey: publishableKey, 
+            publishableKey: publishableKey, // Now mandatory
             defaultProfileId: defaultProfileId, 
             baseUrl: hyperswitchApiBaseUrl
         );
@@ -101,7 +101,7 @@ public class MyHyperswitchService
 // How to use it in your application:
 // var hyperswitchService = new MyHyperswitchService(
 //     "YOUR_SECRET_API_KEY", 
-//     "YOUR_PUBLISHABLE_API_KEY_IF_NEEDED", 
+//     "YOUR_PUBLISHABLE_API_KEY", // Must be provided
 //     "YOUR_DEFAULT_PROFILE_ID_IF_ANY"
 // ); 
 // await hyperswitchService.CreateSomePayment();
@@ -218,7 +218,7 @@ Merchant-level operations.
             ```
     *   **Client-Side Flow Emulation (Publishable Key):**
         *   If `request.ClientSecret` **IS** provided.
-        *   The SDK uses the **Publishable API Key** (must be configured in `HyperswitchClient`).
+        *   The SDK uses the **Publishable API Key** (which is mandatory for client initialization).
         *   The query will *only* include `client_secret`. Other parameters in `MerchantPMLRequest` (like Country, Amount, ProfileId) are ignored for this specific call type.
         *   This is useful if the server needs to fetch payment methods on behalf of a client that has obtained a `client_secret` (e.g., from a Payment Intent).
         *   Example:
@@ -266,7 +266,7 @@ The SDK includes a sample console application (`Hyperswitch.Sdk.Sample`) demonst
 1.  Navigate to the `Hyperswitch.Sdk.Sample` directory.
 2.  Open `Program.cs`. At the beginning of the `Main` method, configure the following string variables:
     *   `secretKey`: Your Hyperswitch Secret API Key.
-    *   `publishableKey`: Your Hyperswitch Publishable API Key (can be `null` if not testing PML with client_secret).
+    *   `publishableKey`: Your Hyperswitch Publishable API Key.
     *   `defaultProfileId`: Your default Hyperswitch Profile ID (can be `null` if you always specify it in requests).
 3.  Run the sample application: `dotnet run`
 
