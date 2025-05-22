@@ -139,11 +139,12 @@ namespace Hyperswitch.Sdk.Models
 
     public class PaymentMethodData
     {
-        /// <summary>
-        /// Type of the payment method (e.g., "card", "paypal").
-        /// </summary>
-        [JsonPropertyName("type")]
-        public string? Type { get; set; } // Not present in cURL for card, but generally good for SDK structure
+        // The 'type' is usually indicated by the key in the JSON, e.g., "card": { ... }
+        // or by a top-level field like PaymentIntentRequest.PaymentMethod.
+        // Removing this explicit 'Type' property to align with potential API expectation
+        // of payment_method_data being a map with a single key (e.g. "card").
+        // [JsonPropertyName("type")]
+        // public string? Type { get; set; } 
 
         [JsonPropertyName("card")]
         public CardDetails? Card { get; set; }

@@ -23,6 +23,12 @@ namespace Hyperswitch.Sdk.Services
             if (request == null)
                 throw new System.ArgumentNullException(nameof(request));
 
+            // Ensure ProfileId is set if not provided in request and a default is available
+            if (string.IsNullOrWhiteSpace(request.ProfileId) && !string.IsNullOrWhiteSpace(_client.DefaultProfileId))
+            {
+                request.ProfileId = _client.DefaultProfileId;
+                System.Console.WriteLine($"[PaymentService DEBUG] Using default ProfileId: {request.ProfileId} for Payment Intent creation.");
+            }
             return await _client.PostAsync<PaymentIntentRequest, PaymentIntentResponse>(PaymentsUrl, request);
         }
 

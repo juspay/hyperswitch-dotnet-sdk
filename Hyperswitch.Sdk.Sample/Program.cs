@@ -14,8 +14,12 @@ namespace Hyperswitch.Sdk.Sample
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hyperswitch SDK Sample - Full Test Suite");
-            string apiKey = "snd_EOQGADPyoizCvcr733PMNPX1GfO5UyalBwqMRGki8RqMyEMc7BtD2sSSFEUMCnJQ"; 
-            var client = new HyperswitchClient(apiKey);
+            
+            string secretKey = "snd_Hk5y3lDZtnUoEr9liTaU7xiyrisfX6pxFfMNEpjiF6YiqJs574PPSY4yKjNAT19t"; 
+            string publishableKey = "pk_snd_5f0dc084ba1045d5a04925eb943161f9";
+            string defaultProfileId = "pro_QqM6TOJtfvsbp6VSvhIn";
+
+            var client = new HyperswitchClient(secretKey: secretKey, publishableKey: publishableKey, defaultProfileId: defaultProfileId);
             var paymentService = new PaymentService(client);
             var refundService = new RefundService(client); 
             var customerService = new CustomerService(client);
@@ -28,7 +32,7 @@ namespace Hyperswitch.Sdk.Sample
 
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
-            string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; 
+            // string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; 
             string? createdTestCustomerId = null;
 
             Console.WriteLine("\n--- SCENARIO 1: MANUAL CAPTURE (Two-Step Create-Confirm) ---");
@@ -185,9 +189,9 @@ namespace Hyperswitch.Sdk.Sample
                 Console.WriteLine("    1. Creating a new Payment Intent associated with the customer...");
                 var createPiRequest = new PaymentIntentRequest
                 {
-                    Amount = 500, // Arbitrary amount
+                    Amount = 500, 
                     Currency = "USD",
-                    CustomerId = customerId, // Associate with the known customer
+                    CustomerId = customerId, 
                     Confirm = false,
                     Description = "Payment for Customer PM List Test"
                 };
@@ -199,7 +203,6 @@ namespace Hyperswitch.Sdk.Sample
                 }
                 PrintPaymentDetails("    1. Payment Intent Created", paymentIntent);
 
-                // Ensure CustomerId is present in the response (it should be if provided in request)
                 if (string.IsNullOrEmpty(paymentIntent.CustomerId))
                 {
                     PrintAndReturnError("    CustomerId not found in PaymentIntentResponse, cannot list PMs.");
@@ -254,25 +257,41 @@ namespace Hyperswitch.Sdk.Sample
                 else
                 {
                     Console.WriteLine("    No saved payment methods found for customer. Simulating selection of a new payment method.");
-                    Console.WriteLine("\n  4. Listing available merchant payment methods (PML)...");
-                    // Calling without ProfileId to see if API infers it from API key
-                    var pmlRequest = new MerchantPMLRequest { Country = "US", Currency = "USD", Amount = createPiRequest.Amount }; 
+                    Console.WriteLine("\n  4. Listing available merchant payment methods (PML) using ClientSecret and pk_snd_ key...");
+                    
+                    if (string.IsNullOrEmpty(paymentIntent.ClientSecret))
+                    {
+                        PrintAndReturnError("  ClientSecret is missing from created Payment Intent. Cannot list PML for this test.");
+                        return;
+                    }
+
+                    var pmlRequest = new MerchantPMLRequest { ClientSecret = paymentIntent.ClientSecret }; 
                     MerchantPMLResponse? pmlResponse = await merchantService.ListAvailablePaymentMethodsAsync(pmlRequest); 
                     
                     if (pmlResponse != null && pmlResponse.PaymentMethods != null && pmlResponse.PaymentMethods.Any())
                     {
-                        // Find the "card" payment method group
                         var cardPaymentMethodGroup = pmlResponse.PaymentMethods.FirstOrDefault(pmg => pmg.PaymentMethodCategory?.ToLower() == "card");
                         if (cardPaymentMethodGroup != null && cardPaymentMethodGroup.PaymentMethodTypes != null && cardPaymentMethodGroup.PaymentMethodTypes.Any())
                         {
-                            // For simplicity, let's assume we're interested in the first detailed type under "card"
-                            // In a real UI, you might iterate through cardPaymentMethodGroup.PaymentMethodTypes 
-                            // to let the user pick a specific card brand or type if multiple are listed.
                             var firstCardTypeDetails = cardPaymentMethodGroup.PaymentMethodTypes.First();
                             Console.WriteLine($"    Simulating selection of new 'card' payment method (type: {firstCardTypeDetails.PaymentMethodType}) from PML.");
+                            confirmRequest.PaymentMethod = "card"; 
                             confirmRequest.PaymentMethodData = new PaymentMethodData
                             {
                                 Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "123" }
+                            };
+                            confirmRequest.BrowserInfo = new BrowserInfo 
+                            {
+                                AcceptHeader = "application/json", 
+                                UserAgent = "Hyperswitch .NET SDK Sample v1.0",
+                                IpAddress = "192.168.1.100", 
+                                Language = "en-US",
+                                ScreenHeight = 1080,
+                                ScreenWidth = 1920,
+                                ColorDepth = 24,
+                                JavaEnabled = true,
+                                JavaScriptEnabled = true,
+                                TimeZone = -330 
                             };
                         }
                         else { PrintAndReturnError("    'card' payment method category or its types not found in merchant PML."); return; }
@@ -297,7 +316,8 @@ namespace Hyperswitch.Sdk.Sample
         static async Task<PaymentIntentResponse?> CreateAndConfirmPaymentForRefund(PaymentService paymentService)
         {
             Console.WriteLine("   Creating a payment with auto-capture for refund testing...");
-            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", ProfileId = "pro_QqM6TOJtfvsbp6VSvhIn", Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
+            // ProfileId will be picked from client's default
+            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
             PaymentIntentResponse? paymentIntent = await paymentService.CreateAsync(createRequest);
             if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("   Payment creation for refund test failed."); return null; }
             PrintPaymentDetails("   Prereq Payment Created", paymentIntent);
@@ -322,7 +342,8 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent (confirm: false)...");
-                var createRequest = new PaymentIntentRequest { Amount = 650, Currency = "USD", ProfileId = "pro_QqM6TOJtfvsbp6VSvhIn", Confirm = false, CaptureMethod = captureMethod, PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-sdk-test@example.com", Description = $"Test SDK Payment ({captureMethod} capture, two-step)", ReturnUrl = "https://example.com/sdk_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "123 Test St", City="Testville", Country="US", Zip="12345"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-GB", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.193", AcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8", UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0" } };
+                // ProfileId will be picked from client's default if not set here
+                var createRequest = new PaymentIntentRequest { Amount = 650, Currency = "USD", /* ProfileId removed */ Confirm = false, CaptureMethod = captureMethod, PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-sdk-test@example.com", Description = $"Test SDK Payment ({captureMethod} capture, two-step)", ReturnUrl = "https://example.com/sdk_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "123 Test St", City="Testville", Country="US", Zip="12345"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-GB", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.193", AcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8", UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId) || string.IsNullOrEmpty(paymentIntent.ClientSecret)) { PrintAndReturnError("PaymentId or ClientSecret is missing after create."); return null; }
                 PrintPaymentDetails("1. After Create (confirm:false)", paymentIntent);
@@ -366,7 +387,8 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent (confirm: true, capture_method: manual)...");
-                var createRequest = new PaymentIntentRequest { Amount = 750, Currency = "USD", ProfileId = "pro_QqM6TOJtfvsbp6VSvhIn", Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-single-call-manual@example.com", Description = "Test SDK Payment (Single-Call Manual Capture)", ReturnUrl = "https://example.com/sdk_single_call_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "789 Test Ave", City="Testburg", Country="US", Zip="67890"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -300, IpAddress = "208.127.127.194", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Test" } };
+                // ProfileId will be picked from client's default
+                var createRequest = new PaymentIntentRequest { Amount = 750, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-single-call-manual@example.com", Description = "Test SDK Payment (Single-Call Manual Capture)", ReturnUrl = "https://example.com/sdk_single_call_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "789 Test Ave", City="Testburg", Country="US", Zip="67890"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -300, IpAddress = "208.127.127.194", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create."); return null; }
                 PrintPaymentDetails("1. After Create (confirm:true, manual capture)", paymentIntent);
@@ -400,7 +422,8 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent for Void Test (confirm: true, capture_method: manual)...");
-                var createRequest = new PaymentIntentRequest { Amount = 800, Currency = "USD", ProfileId = "pro_QqM6TOJtfvsbp6VSvhIn", Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-void-test@example.com", Description = "Test SDK Payment (for Voiding)", ReturnUrl = "https://example.com/sdk_void_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "101 Void St", City="Cancelburg", Country="US", Zip="00000"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.195", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Void Test" } };
+                // ProfileId will be picked from client's default
+                var createRequest = new PaymentIntentRequest { Amount = 800, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-void-test@example.com", Description = "Test SDK Payment (for Voiding)", ReturnUrl = "https://example.com/sdk_void_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "101 Void St", City="Cancelburg", Country="US", Zip="00000"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.195", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Void Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create for void test."); return null; }
                 PrintPaymentDetails("1. After Create (for Void Test)", paymentIntent);
@@ -431,7 +454,8 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent for Update Test (confirm: false)...");
-                var createRequest = new PaymentIntentRequest { Amount = 850, Currency = "USD", ProfileId = "pro_QqM6TOJtfvsbp6VSvhIn", Confirm = false, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-update-initial@example.com", Description = "Initial Description for Update Test", ReturnUrl = "https://example.com/sdk_update_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "202 Update Ave", City="Modifyville", Country="US", Zip="11111"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.196", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Update Test" } };
+                // ProfileId will be picked from client's default
+                var createRequest = new PaymentIntentRequest { Amount = 850, Currency = "USD", /* ProfileId removed */ Confirm = false, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-update-initial@example.com", Description = "Initial Description for Update Test", ReturnUrl = "https://example.com/sdk_update_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "202 Update Ave", City="Modifyville", Country="US", Zip="11111"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.196", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Update Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create for update test."); return null; }
                 PrintPaymentDetails("1. After Create (for Update Test)", paymentIntent);
@@ -512,7 +536,7 @@ namespace Hyperswitch.Sdk.Sample
             {
                 Console.WriteLine($"\n1. Retrieving refund {refundIdToUpdate} before update...");
                 RefundResponse? refundDetails = await refundService.RetrieveRefundAsync(refundIdToUpdate);
-                if (refundDetails == null) { PrintAndReturnError($"Failed to retrieve refund {refundIdToUpdate} before update."); return; }
+                if (refundDetails == null) { PrintAndReturnError($"Failed to retrieve refund {refundIdToUpdate} before update."); return; } // Explicit return for void Task
                 PrintRefundDetails("1. Before Update Refund", refundDetails);
 
                 if (refundDetails.Status == "pending" || refundDetails.Status == "requires_action")
@@ -520,12 +544,13 @@ namespace Hyperswitch.Sdk.Sample
                     Console.WriteLine($"\n2. Updating refund {refundIdToUpdate}...");
                     var updateRequest = new RefundUpdateRequest { Reason = "Updated reason via SDK", Metadata = new Dictionary<string, string> { { "update_source", "sdk_sample_test" }, { "initial_reason", refundDetails.Reason ?? "N/A" } } };
                     RefundResponse? updatedRefund = await refundService.UpdateRefundAsync(refundIdToUpdate, updateRequest);
-                    if (updatedRefund == null) { PrintAndReturnError("Refund Update call returned null or failed."); return; }
+                    if (updatedRefund == null) { PrintAndReturnError("Refund Update call returned null or failed."); return; } // Explicit return
                     PrintRefundDetails("2. After Update Refund Attempt", updatedRefund);
                 } else { Console.ForegroundColor = ConsoleColor.Magenta; Console.WriteLine($"\n2. Refund status is '{refundDetails.Status}'. Update not typically allowed/meaningful. Skipping update attempt."); Console.ResetColor(); }
+                return; // Explicit return at the end of try block
             }
-            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in update refund flow"); }
-            catch (Exception ex) { PrintGenericError(ex, "in update refund flow"); }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in update refund flow"); return; }
+            catch (Exception ex) { PrintGenericError(ex, "in update refund flow"); return; }
         }
 
         static async Task TestListRefundsAsync(RefundService refundService, string? paymentIdToList = null, int? limit = null)

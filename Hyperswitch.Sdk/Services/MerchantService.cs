@@ -24,28 +24,52 @@ namespace Hyperswitch.Sdk.Services
         public async Task<MerchantPMLResponse?> ListAvailablePaymentMethodsAsync(MerchantPMLRequest? request = null)
         {
             string requestUrl = AccountPaymentMethodsUrl;
-            
+            var queryParams = new List<string>();
+
             if (request != null)
             {
-                var queryParams = new List<string>();
-                if (!string.IsNullOrWhiteSpace(request.Country))
-                    queryParams.Add($"country={System.Uri.EscapeDataString(request.Country)}");
-                if (!string.IsNullOrWhiteSpace(request.Currency))
-                    queryParams.Add($"currency={System.Uri.EscapeDataString(request.Currency)}");
-                if (request.Amount.HasValue)
-                    queryParams.Add($"amount={request.Amount.Value}");
-                if (!string.IsNullOrWhiteSpace(request.ProfileId))
-                    queryParams.Add($"profile_id={System.Uri.EscapeDataString(request.ProfileId)}");
+                if (!string.IsNullOrWhiteSpace(request.ClientSecret))
+                {
+                    // If ClientSecret is provided, use it as the sole query parameter.
+                    queryParams.Add($"client_secret={System.Uri.EscapeDataString(request.ClientSecret)}");
+                }
+                else // No ClientSecret, build query for secret key usage
+                {
+                    if (!string.IsNullOrWhiteSpace(request.Country))
+                        queryParams.Add($"country={System.Uri.EscapeDataString(request.Country)}");
+                    if (!string.IsNullOrWhiteSpace(request.Currency))
+                        queryParams.Add($"currency={System.Uri.EscapeDataString(request.Currency)}");
+                    if (request.Amount.HasValue)
+                        queryParams.Add($"amount={request.Amount.Value}");
+                    
+                    string? profileIdToUse = request.ProfileId ?? _client.DefaultProfileId;
+                    if (!string.IsNullOrWhiteSpace(profileIdToUse))
+                        queryParams.Add($"profile_id={System.Uri.EscapeDataString(profileIdToUse)}");
+                }
                 
                 if (queryParams.Count > 0)
                 {
                     requestUrl += "?" + string.Join("&", queryParams);
                 }
             }
-            // Assumes the response is a direct list of MerchantPaymentMethodTypeInfo objects.
-            // If the API returns a wrapper object (e.g. with pagination), MerchantPMLResponse will need to be a class
-            // and this call would be _client.GetAsync<ActualWrapperType>(requestUrl);
-            return await _client.GetAsync<MerchantPMLResponse>(requestUrl);
+            else // No request object, but might still use default profile ID for secret key call
+            {
+                 if (!string.IsNullOrWhiteSpace(_client.DefaultProfileId))
+                 {
+                    requestUrl += $"?profile_id={System.Uri.EscapeDataString(_client.DefaultProfileId)}";
+                 }
+            }
+            
+            if (request != null && !string.IsNullOrWhiteSpace(request.ClientSecret))
+            {
+                System.Console.WriteLine($"[MerchantService] DEBUG: Using Publishable Key for PML call (due to ClientSecret presence). URL: {requestUrl}");
+                return await _client.GetAsync<MerchantPMLResponse>(requestUrl, keyType: ApiKeyType.Publishable);
+            }
+            else
+            {
+                System.Console.WriteLine($"[MerchantService] DEBUG: Using Secret Key for PML call. URL: {requestUrl}");
+                return await _client.GetAsync<MerchantPMLResponse>(requestUrl, keyType: ApiKeyType.Secret);
+            }
         }
     }
 }
