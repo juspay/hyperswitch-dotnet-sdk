@@ -165,6 +165,24 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("setup_future_usage")]
         public string? SetupFutureUsage { get; set; }
+
+        /// <summary>
+        /// Gets or sets mandate data for setting up new mandates.
+        /// </summary>
+        [JsonPropertyName("mandate_data")]
+        public MandateData? MandateData { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the payment is an off-session payment.
+        /// </summary>
+        [JsonPropertyName("off_session")]
+        public bool? OffSession { get; set; }
+
+        /// <summary>
+        /// Gets or sets recurring payment details, used for subsequent mandate payments.
+        /// </summary>
+        [JsonPropertyName("recurring_details")]
+        public RecurringDetailsInfo? RecurringDetails { get; set; }
     }
 
     /// <summary>
