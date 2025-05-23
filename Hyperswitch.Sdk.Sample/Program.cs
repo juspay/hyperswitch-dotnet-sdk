@@ -11,9 +11,9 @@ namespace Hyperswitch.Sdk.Sample
 {
     class Program
     {
-        // Define IDs for mandate testing
-        const string preExistingPaymentIdForMandateTest = "pay_wPdH5mPGvNk1p0DQ2HLF";
-        const string preExistingCustomerIdForMandateTest = "cus_ls4vQCvI0RzuwdIzBcQR";
+        // Define IDs for mandate testing MIT part (to avoid manual intervention in redirection flow)
+        const string preExistingSuccessfulCitPaymentId = "PAYMENT_ID_HERE_WITH_STATUS_SUCCEEDED";
+        const string associatedMitCustomerId = "CUSTOMER_ID_HERE_FOR_MIT";
 
         static async Task Main(string[] args)
         {
@@ -29,14 +29,9 @@ namespace Hyperswitch.Sdk.Sample
             var customerService = new CustomerService(client);
             var merchantService = new MerchantService(client); 
 
-            // string specificPaymentIdToTest = "pay_fzm9HvSJ1wP5yEBDgdtS";
-            // Console.WriteLine($"\n--- SPECIAL TEST: SYNC & REFUND FOR PAYMENT: {specificPaymentIdToTest} ---");
-            // await TestSpecificPaymentSyncAndRefundAsync(paymentService, refundService, specificPaymentIdToTest);
-            // Console.WriteLine($"\n--- END OF SPECIAL TEST ---");
-
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
-            string? createdTestCustomerId = null;
+            string? createdTestCustomerId = null; // This customer is used for general tests
 
             Console.WriteLine("\n--- SCENARIO 1: MANUAL CAPTURE (Two-Step Create-Confirm) ---");
             var p1 = await TestPaymentFlowTwoStep(paymentService, "manual");
@@ -78,44 +73,41 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine("Listing general refunds (limit 3)...");
             await TestListRefundsAsync(refundService, limit: 3); 
             
-            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER ---");
-            createdTestCustomerId = await TestCreateCustomerAsync(customerService);
+            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER (Main Test Customer) ---");
+            createdTestCustomerId = await TestCreateCustomerAsync(customerService); // This customer is used for several scenarios
             
-            Console.WriteLine($"\n--- SCENARIO 18: MANDATE PAYMENT FLOW (Using existing payment and customer) ---");
-            await TestMandatePaymentFlowAsync(paymentService, customerService, preExistingPaymentIdForMandateTest, preExistingCustomerIdForMandateTest);
-
+            Console.WriteLine($"\n--- SCENARIO 18: MANDATE PAYMENT FLOW ---");
+            // Part A of Mandate Flow uses createdTestCustomerId, Part B uses predefined IDs
+            await TestMandatePaymentFlowAsync(paymentService, customerService, createdTestCustomerId, preExistingSuccessfulCitPaymentId, associatedMitCustomerId);
 
             if (!string.IsNullOrEmpty(createdTestCustomerId))
             {
-                Console.WriteLine($"\n--- SCENARIO 11: RETRIEVE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 11: RETRIEVE CUSTOMER (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
                 
-                Console.WriteLine($"\n--- SCENARIO 12: UPDATE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 12: UPDATE CUSTOMER (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestUpdateCustomerAsync(customerService, createdTestCustomerId);
                 
                 Console.WriteLine($"\n--- SCENARIO 13: LIST CUSTOMERS ---");
                 await TestListCustomersAsync(customerService);
 
-                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPaymentMethodsAsync(customerService, createdTestCustomerId); 
                                 
-                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestFullPaymentFlowWithPMSelection(paymentService, customerService, merchantService, createdTestCustomerId);
 
-                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPMsFromPaymentContext(paymentService, customerService, createdTestCustomerId);
 
-                // Note: Original SCENARIO 18 (mandate flow with newly created customer) is now replaced by the one above using predefined IDs.
-                // If you want to test mandate setup with a new customer, that logic would need to be re-enabled or a new scenario created.
-
-                Console.WriteLine($"\n--- SCENARIO 14: DELETE CUSTOMER (ID: {createdTestCustomerId}) ---");
-                await TestDeleteCustomerAsync(customerService, createdTestCustomerId);
-                
-                Console.WriteLine($"\n--- SCENARIO 15: RETRIEVE DELETED CUSTOMER (ID: {createdTestCustomerId}) ---"); 
-                await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
+                // Note: Deletion of createdTestCustomerId is not explicitly done here as it might have active mandates.
+                // The self-contained TestDeleteCustomerAsync (Scenario 14) tests deletion independently.
             }
-            else { Console.WriteLine("\nSkipping Customer CRUD dependent tests and Full Payment Flow as customer creation failed."); }
+            else { Console.WriteLine("\nSkipping Customer-dependent tests (Scenarios 11-13, 9, 16, 17, Part A of 18) as main customer creation failed."); }
             
+            Console.WriteLine($"\n--- SCENARIO 14 & 15: CREATE, DELETE, AND VERIFY DELETION OF A TEMPORARY CUSTOMER ---");
+            await TestDeleteCustomerAsync(customerService); // This is now self-contained
+
             client.Dispose();
         }
 
@@ -770,114 +762,207 @@ namespace Hyperswitch.Sdk.Sample
             catch (Exception ex) { PrintGenericError(ex, "in list customers flow"); }
         }
 
-        static async Task TestDeleteCustomerAsync(CustomerService customerService, string customerId)
+        // Modified to be self-contained for testing delete functionality
+        static async Task TestDeleteCustomerAsync(CustomerService customerService)
         {
-            Console.WriteLine($"Attempting to delete customer with ID: {customerId}");
+            Console.WriteLine("Attempting to create a temporary customer for deletion test...");
+            string? customerIdToDelete = await TestCreateCustomerAsync(customerService); // Create a fresh customer
+
+            if (string.IsNullOrEmpty(customerIdToDelete))
+            {
+                PrintAndReturnError("Failed to create temporary customer for deletion test. Skipping delete test.");
+                return;
+            }
+
+            Console.WriteLine($"Attempting to delete temporary customer with ID: {customerIdToDelete}");
             try
             {
-                CustomerDeleteResponse? response = await customerService.DeleteCustomerAsync(customerId);
+                CustomerDeleteResponse? response = await customerService.DeleteCustomerAsync(customerIdToDelete);
                 if (response != null && response.CustomerDeleted)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Customer with ID {response.CustomerId} deleted successfully. Payment methods deleted: {response.PaymentMethodsDeleted}"); // Removed ToString() and null coalescing
+                    Console.WriteLine($"Temporary customer with ID {response.CustomerId} deleted successfully. Payment methods deleted: {response.PaymentMethodsDeleted}");
                     Console.ResetColor();
                 }
                 else
                 {
-                    PrintAndReturnError($"Failed to delete customer with ID {customerId}. Response: Deleted={response?.CustomerDeleted}, ID={response?.CustomerId}");
+                    PrintAndReturnError($"Failed to delete temporary customer with ID {customerIdToDelete}. Response: Deleted={response?.CustomerDeleted}, ID={response?.CustomerId}");
                 }
             }
-            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in delete customer flow for ID: {customerId}"); }
-            catch (Exception ex) { PrintGenericError(ex, $"in delete customer flow for ID: {customerId}"); }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in delete customer flow for temporary ID: {customerIdToDelete}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in delete customer flow for temporary ID: {customerIdToDelete}"); }
+
+            Console.WriteLine($"\nVerifying deletion by attempting to retrieve temporary customer ID: {customerIdToDelete}");
+            await TestRetrieveCustomerAsync(customerService, customerIdToDelete); // Verify deletion
         }
 
-        // Modified to accept existing payment and customer IDs
-        static async Task TestMandatePaymentFlowAsync(PaymentService paymentService, CustomerService customerService, string existingSuccessfulPaymentId, string associatedCustomerId)
+        static async Task TestMandatePaymentFlowAsync(
+            PaymentService paymentService,
+            CustomerService customerService,
+            string? customerIdForInitialNewSetup, // Nullable if customer creation failed earlier in Main
+            string mitPaymentIdToSync,
+            string mitAssociatedCustomerId)
         {
-            Console.WriteLine($"Testing Mandate Payment Flow using existing Payment ID: {existingSuccessfulPaymentId} and Customer ID: {associatedCustomerId}");
-            PaymentIntentResponse? initialPayment = null;
-            string? paymentMethodToken = null;
+            Console.WriteLine($"\n--- Testing Mandate Payment Flow ---");
+            PaymentIntentResponse? newCitPayment = null;
+            // string? newCitPaymentMethodToken = null; // Not strictly needed if not used later
 
-            try
+            // Part A: Attempt to set up a new mandate (for demonstration)
+            Console.WriteLine("\nPart A: Attempting Initial Mandate Setup Payment (CIT Demo)...");
+            if (!string.IsNullOrEmpty(customerIdForInitialNewSetup))
             {
-                // Step 1: Sync existing payment to get its details and payment_method_id
-                Console.WriteLine($"\n  1. Syncing existing payment {existingSuccessfulPaymentId} to retrieve payment_method_id...");
-                initialPayment = await paymentService.SyncPaymentStatusAsync(existingSuccessfulPaymentId, forceSync: true);
-
-                if (initialPayment == null)
+                try
                 {
-                    PrintAndReturnError($"  Failed to sync existing payment {existingSuccessfulPaymentId}.");
-                    return;
-                }
-                PrintPaymentDetails("  1. Synced Initial Payment Details", initialPayment);
-
-                if (initialPayment.Status != "succeeded")
-                {
-                     PrintAndReturnError($"  Existing payment {existingSuccessfulPaymentId} is not in 'succeeded' state (Status: {initialPayment.Status}). Cannot reliably get payment_method_id for mandate test.");
-                     // Optionally, still try to get PM token if it exists, but it's less certain
-                }
-                
-                paymentMethodToken = initialPayment.PaymentMethodId;
-                
-                if (string.IsNullOrEmpty(paymentMethodToken))
-                {
-                    Console.WriteLine($"\n  1a. PaymentMethodId not directly in PI response for {existingSuccessfulPaymentId}. Listing PMs for customer {associatedCustomerId} to find the token...");
-                    CustomerPaymentMethodListResponse? pms = await customerService.ListPaymentMethodsAsync(associatedCustomerId);
-                    if (pms != null && pms.Data != null && pms.Data.Any())
+                    Console.WriteLine($"  Using Customer ID for new CIT Demo: {customerIdForInitialNewSetup}");
+                    var initialPaymentRequest = new PaymentIntentRequest
                     {
-                        // Heuristic: pick the most recent one.
-                        paymentMethodToken = pms.Data.OrderByDescending(pm => pm.Created).FirstOrDefault()?.PaymentToken;
-                        Console.WriteLine($"    Found payment token via ListPMs: {paymentMethodToken}");
+                        Amount = 1000,
+                        Currency = "USD",
+                        Confirm = true,
+                        CaptureMethod = "automatic",
+                        CustomerId = customerIdForInitialNewSetup,
+                        SetupFutureUsage = "off_session",
+                        Description = "Initial payment for mandate setup demo",
+                        PaymentMethod = "card",
+                        PaymentMethodType = "credit",
+                        PaymentMethodData = new PaymentMethodData
+                        {
+                            Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }
+                        },
+                        AuthenticationType = "no_three_ds",
+                        ReturnUrl = "https://example.com/mandate_return_demo",
+                        MandateData = new MandateData
+                        {
+                            CustomerAcceptance = new Models.CustomerAcceptance
+                            {
+                                AcceptanceType = "offline"
+                            },
+                            MandateType = new Models.MandateType
+                            {
+                                MultiUse = new Models.MandateAmountData { Amount = 0, Currency = "USD" }
+                            }
+                        },
+                        BrowserInfo = new BrowserInfo
+                        {
+                            AcceptHeader = "application/json, text/plain, */*",
+                            UserAgent = "Hyperswitch .NET SDK Sample CIT Demo v1.0",
+                            IpAddress = "127.0.0.1",
+                            Language = "en-US",
+                            ScreenHeight = 1080,
+                            ScreenWidth = 1920,
+                            ColorDepth = 24,
+                            JavaEnabled = true,
+                            JavaScriptEnabled = true,
+                            TimeZone = -330
+                        }
+                    };
+
+                    newCitPayment = await paymentService.CreateAsync(initialPaymentRequest);
+                    if (newCitPayment != null) PrintPaymentDetails("  New CIT Demo - Initial Response", newCitPayment);
+                    else PrintAndReturnError("  New CIT Demo - Payment creation returned null.");
+
+                    if (newCitPayment != null && (newCitPayment.Status == "requires_customer_action" || newCitPayment.Status == "processing" || newCitPayment.Status == "requires_payment_method" || newCitPayment.Status == "requires_confirmation"))
+                    {
+                        Console.WriteLine($"    New CIT Demo - Payment {newCitPayment.PaymentId} requires further action (Status: {newCitPayment.Status}). This is expected for demo.");
                     }
+                    // newCitPaymentMethodToken = newCitPayment?.PaymentMethodId; // We don't use this token for Part B
+                    Console.WriteLine($"    New CIT Demo - PaymentMethodId from this attempt (not used for MIT test): {newCitPayment?.PaymentMethodId ?? "N/A"}");
                 }
-                
-                if (string.IsNullOrEmpty(paymentMethodToken))
-                {
-                     PrintAndReturnError($"  Failed to obtain payment method token from existing payment {existingSuccessfulPaymentId} or customer {associatedCustomerId}.");
-                     return;
-                }
-                Console.WriteLine($"\n  2. Obtained Payment Method Token: {paymentMethodToken} for Customer: {associatedCustomerId}");
-                
-
-                // Step 2: Subsequent payment using the payment method token
-                Console.WriteLine("\n  3. Creating subsequent payment using the saved payment method token...");
-                var subsequentPaymentRequest = new PaymentIntentRequest
-                {
-                    Amount = 1, // Small amount for testing MIT
-                    Currency = "USD",
-                    Confirm = true,
-                    CustomerId = associatedCustomerId, // Use the provided customer ID
-                    OffSession = true, 
-                    RecurringDetails = new RecurringDetailsInfo
-                    {
-                        Type = "payment_method_id", 
-                        Data = paymentMethodToken
-                    },
-                    Description = "Subsequent Mandate Test Payment"
-                };
-
-                PaymentIntentResponse? subsequentPayment = await paymentService.CreateAsync(subsequentPaymentRequest);
-                if (subsequentPayment == null || string.IsNullOrEmpty(subsequentPayment.PaymentId))
-                {
-                    PrintAndReturnError("  Subsequent mandate payment creation failed.");
-                    return;
-                }
-                PrintPaymentDetails("  3. Subsequent Mandate Payment", subsequentPayment);
-                
-                int attempts = 0;
-                while (subsequentPayment.Status == "requires_customer_action" || subsequentPayment.Status == "processing" || subsequentPayment.Status == "requires_payment_method" || subsequentPayment.Status == "requires_confirmation")
-                {
-                    if (attempts >= 3) { Console.ForegroundColor = ConsoleColor.Yellow; Console.WriteLine($"    Subsequent payment {subsequentPayment.PaymentId} did not reach a final state after {attempts} syncs. Current status: {subsequentPayment.Status}."); Console.ResetColor(); break; }
-                    Console.WriteLine($"\n    Syncing subsequent payment {subsequentPayment.PaymentId} (attempt {++attempts}), current status: {subsequentPayment.Status}...");
-                    await Task.Delay(2000); 
-                    subsequentPayment = await paymentService.SyncPaymentStatusAsync(subsequentPayment.PaymentId!, clientSecret: subsequentPayment.ClientSecret, forceSync: true);
-                    if (subsequentPayment == null) { PrintAndReturnError("    Sync returned null for subsequent payment."); return; }
-                    PrintPaymentDetails($"    After Subsequent Payment Sync Attempt {attempts}", subsequentPayment);
-                }
-                Console.WriteLine($"  Final status for subsequent mandate payment {subsequentPayment?.PaymentId}: {subsequentPayment?.Status}");
+                catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in New CIT Demo for customer {customerIdForInitialNewSetup}"); }
+                catch (Exception ex) { PrintGenericError(ex, $"in New CIT Demo for customer {customerIdForInitialNewSetup}"); }
             }
-            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in mandate payment flow for customer {associatedCustomerId}"); }
-            catch (Exception ex) { PrintGenericError(ex, $"in mandate payment flow for customer {associatedCustomerId}"); }
+            else
+            {
+                Console.WriteLine("  Skipping New CIT Demo part as customerIdForInitialNewSetup was not provided (likely main customer creation failed earlier).");
+            }
+
+            // Part B: Test Subsequent Mandate Payment (MIT) using Predefined IDs
+            Console.WriteLine($"\nPart B: Testing Subsequent Mandate Payment (MIT) using Predefined IDs...");
+            Console.WriteLine($"  Using existing successful CIT Payment ID: {mitPaymentIdToSync}");
+            Console.WriteLine($"  Using associated Customer ID for MIT: {mitAssociatedCustomerId}");
+
+            PaymentIntentResponse? existingCitPayment = null;
+            string? mitPaymentMethodToken = null;
+
+            // Uncomment the line below to test an MIT (Merchant Initiated Transaction)
+
+            // try
+            // {
+            //     Console.WriteLine($"  1. Syncing existing payment {mitPaymentIdToSync} to retrieve its payment_method_id...");
+            //     existingCitPayment = await paymentService.SyncPaymentStatusAsync(mitPaymentIdToSync, forceSync: true);
+
+            //     if (existingCitPayment == null)
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Failed to sync existing payment {mitPaymentIdToSync}.");
+            //         return;
+            //     }
+            //     PrintPaymentDetails("  MIT Test - Synced Existing CIT Details", existingCitPayment);
+
+            //     if (existingCitPayment.Status != "succeeded")
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Existing payment {mitPaymentIdToSync} is not in 'succeeded' state (Status: {existingCitPayment.Status}). Cannot reliably get payment_method_id.");
+            //         // Even if not succeeded, try to get PM token if it exists, but it's less certain to work for MIT
+            //     }
+
+            //     mitPaymentMethodToken = existingCitPayment.PaymentMethodId;
+
+            //     if (string.IsNullOrEmpty(mitPaymentMethodToken))
+            //     {
+            //         Console.WriteLine($"\n  1a. MIT Test - PaymentMethodId not directly in PI response for {mitPaymentIdToSync}. Listing PMs for customer {mitAssociatedCustomerId} to find the token...");
+            //         CustomerPaymentMethodListResponse? pms = await customerService.ListPaymentMethodsAsync(mitAssociatedCustomerId);
+            //         if (pms != null && pms.Data != null && pms.Data.Any())
+            //         {
+            //             mitPaymentMethodToken = pms.Data.OrderByDescending(pm => pm.Created).FirstOrDefault()?.PaymentToken;
+            //             Console.WriteLine($"    MIT Test - Found payment token via ListPMs: {mitPaymentMethodToken}");
+            //         }
+            //     }
+
+            //     if (string.IsNullOrEmpty(mitPaymentMethodToken))
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Failed to obtain payment method token from existing payment {mitPaymentIdToSync} or customer {mitAssociatedCustomerId}.");
+            //         return;
+            //     }
+            //     Console.WriteLine($"\n  2. MIT Test - Obtained Payment Method Token: {mitPaymentMethodToken} for Customer: {mitAssociatedCustomerId}");
+
+            //     Console.WriteLine("\n  3. MIT Test - Creating subsequent payment using the saved payment method token...");
+            //     var subsequentPaymentRequest = new PaymentIntentRequest
+            //     {
+            //         Amount = 1,
+            //         Currency = "USD",
+            //         Confirm = true,
+            //         CustomerId = mitAssociatedCustomerId,
+            //         OffSession = true,
+            //         RecurringDetails = new RecurringDetailsInfo
+            //         {
+            //             Type = "payment_method_id",
+            //             Data = mitPaymentMethodToken
+            //         },
+            //         Description = "Subsequent Mandate Test Payment (MIT)"
+            //     };
+
+            //     PaymentIntentResponse? subsequentPayment = await paymentService.CreateAsync(subsequentPaymentRequest);
+            //     if (subsequentPayment == null || string.IsNullOrEmpty(subsequentPayment.PaymentId))
+            //     {
+            //         PrintAndReturnError("  MIT Test - Subsequent mandate payment creation failed.");
+            //         return;
+            //     }
+            //     PrintPaymentDetails("  3. MIT Test - Subsequent Mandate Payment Response", subsequentPayment);
+
+            //     int attempts = 0;
+            //     while (subsequentPayment.Status == "requires_customer_action" || subsequentPayment.Status == "processing" || subsequentPayment.Status == "requires_payment_method" || subsequentPayment.Status == "requires_confirmation")
+            //     {
+            //         if (attempts >= 3) { Console.ForegroundColor = ConsoleColor.Yellow; Console.WriteLine($"    MIT Test - Subsequent payment {subsequentPayment.PaymentId} did not reach a final state after {attempts} syncs. Current status: {subsequentPayment.Status}."); Console.ResetColor(); break; }
+            //         Console.WriteLine($"\n    MIT Test - Syncing subsequent payment {subsequentPayment.PaymentId} (attempt {++attempts}), current status: {subsequentPayment.Status}...");
+            //         await Task.Delay(2000);
+            //         subsequentPayment = await paymentService.SyncPaymentStatusAsync(subsequentPayment.PaymentId!, clientSecret: subsequentPayment.ClientSecret, forceSync: true);
+            //         if (subsequentPayment == null) { PrintAndReturnError("    MIT Test - Sync returned null for subsequent payment."); return; }
+            //         PrintPaymentDetails($"    MIT Test - After Subsequent Payment Sync Attempt {attempts}", subsequentPayment);
+            //     }
+            //     Console.WriteLine($"  MIT Test - Final status for subsequent mandate payment {subsequentPayment?.PaymentId}: {subsequentPayment?.Status}");
+            // }
+            // catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in MIT Test part for customer {mitAssociatedCustomerId}"); }
+            // catch (Exception ex) { PrintGenericError(ex, $"in MIT Test part for customer {mitAssociatedCustomerId}"); }
+
         }
 
 
