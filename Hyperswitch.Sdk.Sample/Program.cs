@@ -11,6 +11,10 @@ namespace Hyperswitch.Sdk.Sample
 {
     class Program
     {
+        // Define IDs for mandate testing MIT part (to avoid manual intervention in redirection flow)
+        const string preExistingSuccessfulCitPaymentId = "PAYMENT_ID_HERE_WITH_STATUS_SUCCEEDED";
+        const string associatedMitCustomerId = "CUSTOMER_ID_HERE_FOR_MIT";
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hyperswitch SDK Sample - Full Test Suite");
@@ -25,15 +29,9 @@ namespace Hyperswitch.Sdk.Sample
             var customerService = new CustomerService(client);
             var merchantService = new MerchantService(client); 
 
-            string specificPaymentIdToTest = "pay_fzm9HvSJ1wP5yEBDgdtS";
-            Console.WriteLine($"\n--- SPECIAL TEST: SYNC & REFUND FOR PAYMENT: {specificPaymentIdToTest} ---");
-            await TestSpecificPaymentSyncAndRefundAsync(paymentService, refundService, specificPaymentIdToTest);
-            Console.WriteLine($"\n--- END OF SPECIAL TEST ---");
-
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
-            // string? existingTestCustomerId = "cus_y3h0zEXxP9Z2rP9cM0xZ"; // Unused variable
-            string? createdTestCustomerId = null;
+            string? createdTestCustomerId = null; // This customer is used for general tests
 
             Console.WriteLine("\n--- SCENARIO 1: MANUAL CAPTURE (Two-Step Create-Confirm) ---");
             var p1 = await TestPaymentFlowTwoStep(paymentService, "manual");
@@ -75,36 +73,40 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine("Listing general refunds (limit 3)...");
             await TestListRefundsAsync(refundService, limit: 3); 
             
-            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER ---");
-            createdTestCustomerId = await TestCreateCustomerAsync(customerService);
+            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER (Main Test Customer) ---");
+            createdTestCustomerId = await TestCreateCustomerAsync(customerService); // This customer is used for several scenarios
             
+            Console.WriteLine($"\n--- SCENARIO 18: MANDATE PAYMENT FLOW ---");
+            // Part A of Mandate Flow uses createdTestCustomerId, Part B uses predefined IDs
+            await TestMandatePaymentFlowAsync(paymentService, customerService, createdTestCustomerId, preExistingSuccessfulCitPaymentId, associatedMitCustomerId);
+
             if (!string.IsNullOrEmpty(createdTestCustomerId))
             {
-                Console.WriteLine($"\n--- SCENARIO 11: RETRIEVE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 11: RETRIEVE CUSTOMER (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
                 
-                Console.WriteLine($"\n--- SCENARIO 12: UPDATE CUSTOMER (ID: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 12: UPDATE CUSTOMER (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestUpdateCustomerAsync(customerService, createdTestCustomerId);
                 
                 Console.WriteLine($"\n--- SCENARIO 13: LIST CUSTOMERS ---");
                 await TestListCustomersAsync(customerService);
 
-                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPaymentMethodsAsync(customerService, createdTestCustomerId); 
                                 
-                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestFullPaymentFlowWithPMSelection(paymentService, customerService, merchantService, createdTestCustomerId);
 
-                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPMsFromPaymentContext(paymentService, customerService, createdTestCustomerId);
 
-                Console.WriteLine($"\n--- SCENARIO 14: DELETE CUSTOMER (ID: {createdTestCustomerId}) ---");
-                await TestDeleteCustomerAsync(customerService, createdTestCustomerId);
-                
-                Console.WriteLine($"\n--- SCENARIO 15: RETRIEVE DELETED CUSTOMER (ID: {createdTestCustomerId}) ---"); 
-                await TestRetrieveCustomerAsync(customerService, createdTestCustomerId);
+                // Note: Deletion of createdTestCustomerId is not explicitly done here as it might have active mandates.
+                // The self-contained TestDeleteCustomerAsync (Scenario 14) tests deletion independently.
             }
-            else { Console.WriteLine("\nSkipping Customer CRUD dependent tests and Full Payment Flow as customer creation failed."); }
+            else { Console.WriteLine("\nSkipping Customer-dependent tests (Scenarios 11-13, 9, 16, 17, Part A of 18) as main customer creation failed."); }
+            
+            Console.WriteLine($"\n--- SCENARIO 14 & 15: CREATE, DELETE, AND VERIFY DELETION OF A TEMPORARY CUSTOMER ---");
+            await TestDeleteCustomerAsync(customerService); // This is now self-contained
 
             client.Dispose();
         }
@@ -194,7 +196,6 @@ namespace Hyperswitch.Sdk.Sample
                     CustomerId = customerId, 
                     Confirm = false,
                     Description = "Payment for Customer PM List Test"
-                    // ProfileId will use default from client
                 };
                 paymentIntent = await paymentService.CreateAsync(createPiRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
@@ -238,7 +239,6 @@ namespace Hyperswitch.Sdk.Sample
                     Confirm = false, 
                     SetupFutureUsage = "on_session", 
                     Description = "Test Payment Flow with PM Selection"
-                    // ProfileId will use default from client
                 };
                 paymentIntent = await paymentService.CreateAsync(createPiRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId))
@@ -318,8 +318,7 @@ namespace Hyperswitch.Sdk.Sample
         static async Task<PaymentIntentResponse?> CreateAndConfirmPaymentForRefund(PaymentService paymentService)
         {
             Console.WriteLine("   Creating a payment with auto-capture for refund testing...");
-            // ProfileId will be picked from client's default
-            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", /* ProfileId removed again */ Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
+            var createRequest = new PaymentIntentRequest { Amount = 1200, Currency = "USD", Confirm = true, CaptureMethod = "automatic", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-for-refund@example.com", Description = "Payment for Refund Test", ReturnUrl = "https://example.com/sdk_auto_capture_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "404 Refund Ln", City="SucceedCity", Country="US", Zip="33333"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.198", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Refund Prereq" } };
             PaymentIntentResponse? paymentIntent = await paymentService.CreateAsync(createRequest);
             if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("   Payment creation for refund test failed."); return null; }
             PrintPaymentDetails("   Prereq Payment Created", paymentIntent);
@@ -344,8 +343,7 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent (confirm: false)...");
-                // ProfileId will be picked from client's default
-                var createRequest = new PaymentIntentRequest { Amount = 650, Currency = "USD", /* ProfileId removed */ Confirm = false, CaptureMethod = captureMethod, PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-sdk-test@example.com", Description = $"Test SDK Payment ({captureMethod} capture, two-step)", ReturnUrl = "https://example.com/sdk_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "123 Test St", City="Testville", Country="US", Zip="12345"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-GB", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.193", AcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8", UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0" } };
+                var createRequest = new PaymentIntentRequest { Amount = 650, Currency = "USD", Confirm = false, CaptureMethod = captureMethod, PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-sdk-test@example.com", Description = $"Test SDK Payment ({captureMethod} capture, two-step)", ReturnUrl = "https://example.com/sdk_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "123 Test St", City="Testville", Country="US", Zip="12345"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-GB", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.193", AcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8", UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId) || string.IsNullOrEmpty(paymentIntent.ClientSecret)) { PrintAndReturnError("PaymentId or ClientSecret is missing after create."); return null; }
                 PrintPaymentDetails("1. After Create (confirm:false)", paymentIntent);
@@ -389,8 +387,7 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent (confirm: true, capture_method: manual)...");
-                // ProfileId will be picked from client's default
-                var createRequest = new PaymentIntentRequest { Amount = 750, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-single-call-manual@example.com", Description = "Test SDK Payment (Single-Call Manual Capture)", ReturnUrl = "https://example.com/sdk_single_call_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "789 Test Ave", City="Testburg", Country="US", Zip="67890"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -300, IpAddress = "208.127.127.194", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Test" } };
+                var createRequest = new PaymentIntentRequest { Amount = 750, Currency = "USD", Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-single-call-manual@example.com", Description = "Test SDK Payment (Single-Call Manual Capture)", ReturnUrl = "https://example.com/sdk_single_call_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "789 Test Ave", City="Testburg", Country="US", Zip="67890"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -300, IpAddress = "208.127.127.194", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create."); return null; }
                 PrintPaymentDetails("1. After Create (confirm:true, manual capture)", paymentIntent);
@@ -424,8 +421,7 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent for Void Test (confirm: true, capture_method: manual)...");
-                // ProfileId will be picked from client's default
-                var createRequest = new PaymentIntentRequest { Amount = 800, Currency = "USD", /* ProfileId removed */ Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-void-test@example.com", Description = "Test SDK Payment (for Voiding)", ReturnUrl = "https://example.com/sdk_void_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "101 Void St", City="Cancelburg", Country="US", Zip="00000"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.195", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Void Test" } };
+                var createRequest = new PaymentIntentRequest { Amount = 800, Currency = "USD", Confirm = true, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-void-test@example.com", Description = "Test SDK Payment (for Voiding)", ReturnUrl = "https://example.com/sdk_void_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "101 Void St", City="Cancelburg", Country="US", Zip="00000"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.195", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Void Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create for void test."); return null; }
                 PrintPaymentDetails("1. After Create (for Void Test)", paymentIntent);
@@ -456,8 +452,7 @@ namespace Hyperswitch.Sdk.Sample
             try
             {
                 Console.WriteLine("\n1. Creating Payment Intent for Update Test (confirm: false)...");
-                // ProfileId will be picked from client's default
-                var createRequest = new PaymentIntentRequest { Amount = 850, Currency = "USD", /* ProfileId removed */ Confirm = false, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-update-initial@example.com", Description = "Initial Description for Update Test", ReturnUrl = "https://example.com/sdk_update_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "202 Update Ave", City="Modifyville", Country="US", Zip="11111"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.196", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Update Test" } };
+                var createRequest = new PaymentIntentRequest { Amount = 850, Currency = "USD", Confirm = false, CaptureMethod = "manual", PaymentMethod = "card", PaymentMethodType = "credit", Email = "customer-update-initial@example.com", Description = "Initial Description for Update Test", ReturnUrl = "https://example.com/sdk_update_return", PaymentMethodData = new PaymentMethodData { Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }, Billing = new Address { AddressDetails = new AddressDetails { Line1 = "202 Update Ave", City="Modifyville", Country="US", Zip="11111"} } }, AuthenticationType = "no_three_ds", BrowserInfo = new BrowserInfo { ColorDepth = 24, JavaEnabled = true, JavaScriptEnabled = true, Language = "en-US", ScreenHeight = 720, ScreenWidth = 1280, TimeZone = -330, IpAddress = "208.127.127.196", AcceptHeader = "application/json", UserAgent = "Mozilla/5.0 SDK Update Test" } };
                 paymentIntent = await paymentService.CreateAsync(createRequest);
                 if (paymentIntent == null || string.IsNullOrEmpty(paymentIntent.PaymentId)) { PrintAndReturnError("PaymentId is missing after create for update test."); return null; }
                 PrintPaymentDetails("1. After Create (for Update Test)", paymentIntent);
@@ -767,26 +762,208 @@ namespace Hyperswitch.Sdk.Sample
             catch (Exception ex) { PrintGenericError(ex, "in list customers flow"); }
         }
 
-        static async Task TestDeleteCustomerAsync(CustomerService customerService, string customerId)
+        // Modified to be self-contained for testing delete functionality
+        static async Task TestDeleteCustomerAsync(CustomerService customerService)
         {
-            Console.WriteLine($"Attempting to delete customer with ID: {customerId}");
+            Console.WriteLine("Attempting to create a temporary customer for deletion test...");
+            string? customerIdToDelete = await TestCreateCustomerAsync(customerService); // Create a fresh customer
+
+            if (string.IsNullOrEmpty(customerIdToDelete))
+            {
+                PrintAndReturnError("Failed to create temporary customer for deletion test. Skipping delete test.");
+                return;
+            }
+
+            Console.WriteLine($"Attempting to delete temporary customer with ID: {customerIdToDelete}");
             try
             {
-                CustomerDeleteResponse? response = await customerService.DeleteCustomerAsync(customerId);
+                CustomerDeleteResponse? response = await customerService.DeleteCustomerAsync(customerIdToDelete);
                 if (response != null && response.CustomerDeleted)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Customer with ID {response.CustomerId} deleted successfully. Payment methods deleted: {response.PaymentMethodsDeleted?.ToString() ?? "N/A"}");
+                    Console.WriteLine($"Temporary customer with ID {response.CustomerId} deleted successfully. Payment methods deleted: {response.PaymentMethodsDeleted}");
                     Console.ResetColor();
                 }
                 else
                 {
-                    PrintAndReturnError($"Failed to delete customer with ID {customerId}. Response: Deleted={response?.CustomerDeleted}, ID={response?.CustomerId}");
+                    PrintAndReturnError($"Failed to delete temporary customer with ID {customerIdToDelete}. Response: Deleted={response?.CustomerDeleted}, ID={response?.CustomerId}");
                 }
             }
-            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in delete customer flow for ID: {customerId}"); }
-            catch (Exception ex) { PrintGenericError(ex, $"in delete customer flow for ID: {customerId}"); }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in delete customer flow for temporary ID: {customerIdToDelete}"); }
+            catch (Exception ex) { PrintGenericError(ex, $"in delete customer flow for temporary ID: {customerIdToDelete}"); }
+
+            Console.WriteLine($"\nVerifying deletion by attempting to retrieve temporary customer ID: {customerIdToDelete}");
+            await TestRetrieveCustomerAsync(customerService, customerIdToDelete); // Verify deletion
         }
+
+        static async Task TestMandatePaymentFlowAsync(
+            PaymentService paymentService,
+            CustomerService customerService,
+            string? customerIdForInitialNewSetup, // Nullable if customer creation failed earlier in Main
+            string mitPaymentIdToSync,
+            string mitAssociatedCustomerId)
+        {
+            Console.WriteLine($"\n--- Testing Mandate Payment Flow ---");
+            PaymentIntentResponse? newCitPayment = null;
+            // string? newCitPaymentMethodToken = null; // Not strictly needed if not used later
+
+            // Part A: Attempt to set up a new mandate (for demonstration)
+            Console.WriteLine("\nPart A: Attempting Initial Mandate Setup Payment (CIT Demo)...");
+            if (!string.IsNullOrEmpty(customerIdForInitialNewSetup))
+            {
+                try
+                {
+                    Console.WriteLine($"  Using Customer ID for new CIT Demo: {customerIdForInitialNewSetup}");
+                    var initialPaymentRequest = new PaymentIntentRequest
+                    {
+                        Amount = 1000,
+                        Currency = "USD",
+                        Confirm = true,
+                        CaptureMethod = "automatic",
+                        CustomerId = customerIdForInitialNewSetup,
+                        SetupFutureUsage = "off_session",
+                        Description = "Initial payment for mandate setup demo",
+                        PaymentMethod = "card",
+                        PaymentMethodType = "credit",
+                        PaymentMethodData = new PaymentMethodData
+                        {
+                            Card = new CardDetails { CardNumber = "4917610000000000", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737" }
+                        },
+                        AuthenticationType = "no_three_ds",
+                        ReturnUrl = "https://example.com/mandate_return_demo",
+                        MandateData = new MandateData
+                        {
+                            CustomerAcceptance = new Models.CustomerAcceptance
+                            {
+                                AcceptanceType = "offline"
+                            },
+                            MandateType = new Models.MandateType
+                            {
+                                MultiUse = new Models.MandateAmountData { Amount = 0, Currency = "USD" }
+                            }
+                        },
+                        BrowserInfo = new BrowserInfo
+                        {
+                            AcceptHeader = "application/json, text/plain, */*",
+                            UserAgent = "Hyperswitch .NET SDK Sample CIT Demo v1.0",
+                            IpAddress = "127.0.0.1",
+                            Language = "en-US",
+                            ScreenHeight = 1080,
+                            ScreenWidth = 1920,
+                            ColorDepth = 24,
+                            JavaEnabled = true,
+                            JavaScriptEnabled = true,
+                            TimeZone = -330
+                        }
+                    };
+
+                    newCitPayment = await paymentService.CreateAsync(initialPaymentRequest);
+                    if (newCitPayment != null) PrintPaymentDetails("  New CIT Demo - Initial Response", newCitPayment);
+                    else PrintAndReturnError("  New CIT Demo - Payment creation returned null.");
+
+                    if (newCitPayment != null && (newCitPayment.Status == "requires_customer_action" || newCitPayment.Status == "processing" || newCitPayment.Status == "requires_payment_method" || newCitPayment.Status == "requires_confirmation"))
+                    {
+                        Console.WriteLine($"    New CIT Demo - Payment {newCitPayment.PaymentId} requires further action (Status: {newCitPayment.Status}). This is expected for demo.");
+                    }
+                    // newCitPaymentMethodToken = newCitPayment?.PaymentMethodId; // We don't use this token for Part B
+                    Console.WriteLine($"    New CIT Demo - PaymentMethodId from this attempt (not used for MIT test): {newCitPayment?.PaymentMethodId ?? "N/A"}");
+                }
+                catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in New CIT Demo for customer {customerIdForInitialNewSetup}"); }
+                catch (Exception ex) { PrintGenericError(ex, $"in New CIT Demo for customer {customerIdForInitialNewSetup}"); }
+            }
+            else
+            {
+                Console.WriteLine("  Skipping New CIT Demo part as customerIdForInitialNewSetup was not provided (likely main customer creation failed earlier).");
+            }
+
+            // Part B: Test Subsequent Mandate Payment (MIT) using Predefined IDs
+            Console.WriteLine($"\nPart B: Testing Subsequent Mandate Payment (MIT) using Predefined IDs...");
+            Console.WriteLine($"  Using existing successful CIT Payment ID: {mitPaymentIdToSync}");
+            Console.WriteLine($"  Using associated Customer ID for MIT: {mitAssociatedCustomerId}");
+            // Uncomment the code below to test an MIT (Merchant Initiated Transaction)
+
+            // PaymentIntentResponse? existingCitPayment = null;
+            // string? mitPaymentMethodToken = null;
+
+            // try
+            // {
+            //     Console.WriteLine($"  1. Syncing existing payment {mitPaymentIdToSync} to retrieve its payment_method_id...");
+            //     existingCitPayment = await paymentService.SyncPaymentStatusAsync(mitPaymentIdToSync, forceSync: true);
+
+            //     if (existingCitPayment == null)
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Failed to sync existing payment {mitPaymentIdToSync}.");
+            //         return;
+            //     }
+            //     PrintPaymentDetails("  MIT Test - Synced Existing CIT Details", existingCitPayment);
+
+            //     if (existingCitPayment.Status != "succeeded")
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Existing payment {mitPaymentIdToSync} is not in 'succeeded' state (Status: {existingCitPayment.Status}). Cannot reliably get payment_method_id.");
+            //         // Even if not succeeded, try to get PM token if it exists, but it's less certain to work for MIT
+            //     }
+
+            //     mitPaymentMethodToken = existingCitPayment.PaymentMethodId;
+
+            //     if (string.IsNullOrEmpty(mitPaymentMethodToken))
+            //     {
+            //         Console.WriteLine($"\n  1a. MIT Test - PaymentMethodId not directly in PI response for {mitPaymentIdToSync}. Listing PMs for customer {mitAssociatedCustomerId} to find the token...");
+            //         CustomerPaymentMethodListResponse? pms = await customerService.ListPaymentMethodsAsync(mitAssociatedCustomerId);
+            //         if (pms != null && pms.Data != null && pms.Data.Any())
+            //         {
+            //             mitPaymentMethodToken = pms.Data.OrderByDescending(pm => pm.Created).FirstOrDefault()?.PaymentToken;
+            //             Console.WriteLine($"    MIT Test - Found payment token via ListPMs: {mitPaymentMethodToken}");
+            //         }
+            //     }
+
+            //     if (string.IsNullOrEmpty(mitPaymentMethodToken))
+            //     {
+            //         PrintAndReturnError($"  MIT Test - Failed to obtain payment method token from existing payment {mitPaymentIdToSync} or customer {mitAssociatedCustomerId}.");
+            //         return;
+            //     }
+            //     Console.WriteLine($"\n  2. MIT Test - Obtained Payment Method Token: {mitPaymentMethodToken} for Customer: {mitAssociatedCustomerId}");
+
+            //     Console.WriteLine("\n  3. MIT Test - Creating subsequent payment using the saved payment method token...");
+            //     var subsequentPaymentRequest = new PaymentIntentRequest
+            //     {
+            //         Amount = 1,
+            //         Currency = "USD",
+            //         Confirm = true,
+            //         CustomerId = mitAssociatedCustomerId,
+            //         OffSession = true,
+            //         RecurringDetails = new RecurringDetailsInfo
+            //         {
+            //             Type = "payment_method_id",
+            //             Data = mitPaymentMethodToken
+            //         },
+            //         Description = "Subsequent Mandate Test Payment (MIT)"
+            //     };
+
+            //     PaymentIntentResponse? subsequentPayment = await paymentService.CreateAsync(subsequentPaymentRequest);
+            //     if (subsequentPayment == null || string.IsNullOrEmpty(subsequentPayment.PaymentId))
+            //     {
+            //         PrintAndReturnError("  MIT Test - Subsequent mandate payment creation failed.");
+            //         return;
+            //     }
+            //     PrintPaymentDetails("  3. MIT Test - Subsequent Mandate Payment Response", subsequentPayment);
+
+            //     int attempts = 0;
+            //     while (subsequentPayment.Status == "requires_customer_action" || subsequentPayment.Status == "processing" || subsequentPayment.Status == "requires_payment_method" || subsequentPayment.Status == "requires_confirmation")
+            //     {
+            //         if (attempts >= 3) { Console.ForegroundColor = ConsoleColor.Yellow; Console.WriteLine($"    MIT Test - Subsequent payment {subsequentPayment.PaymentId} did not reach a final state after {attempts} syncs. Current status: {subsequentPayment.Status}."); Console.ResetColor(); break; }
+            //         Console.WriteLine($"\n    MIT Test - Syncing subsequent payment {subsequentPayment.PaymentId} (attempt {++attempts}), current status: {subsequentPayment.Status}...");
+            //         await Task.Delay(2000);
+            //         subsequentPayment = await paymentService.SyncPaymentStatusAsync(subsequentPayment.PaymentId!, clientSecret: subsequentPayment.ClientSecret, forceSync: true);
+            //         if (subsequentPayment == null) { PrintAndReturnError("    MIT Test - Sync returned null for subsequent payment."); return; }
+            //         PrintPaymentDetails($"    MIT Test - After Subsequent Payment Sync Attempt {attempts}", subsequentPayment);
+            //     }
+            //     Console.WriteLine($"  MIT Test - Final status for subsequent mandate payment {subsequentPayment?.PaymentId}: {subsequentPayment?.Status}");
+            // }
+            // catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, $"in MIT Test part for customer {mitAssociatedCustomerId}"); }
+            // catch (Exception ex) { PrintGenericError(ex, $"in MIT Test part for customer {mitAssociatedCustomerId}"); }
+
+        }
+
 
         static void PrintCustomerDetails(string stage, CustomerResponse? customer)
         {

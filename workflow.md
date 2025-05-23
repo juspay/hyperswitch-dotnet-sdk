@@ -4,12 +4,12 @@
 Generate a robust and easy-to-use .NET Server-Side SDK to interact with Hyperswitch Server-to-Server (S2S) APIs.
 
 ## 2. Core Requirements & Decisions
-*   **Target Platform:** .NET 8 (LTS)
+*   **Target Platform:** .NET 9.0 (Updated from .NET 8)
 *   **Language:** C#
 *   **Primary HTTP Client:** `System.Net.Http.HttpClient`
 *   **JSON Serialization:** `System.Text.Json`
-*   **Authentication:** API Secret Key via `Authorization: Bearer <apiKey>` header.
-*   **Initial API Focus:** Payments API (Create, Retrieve).
+*   **Authentication:** API Secret Key via `api-key` header (Updated from Authorization: Bearer). Publishable key also supported.
+*   **API Focus:** Payments (Create, Retrieve, Confirm, Capture, Update, Cancel, Mandates/Recurring), Refunds, Customers, Merchant Payment Methods.
 *   **Error Handling:** Custom `HyperswitchApiException` for API errors.
 *   **Project Type:** .NET Class Library
 
@@ -60,5 +60,37 @@ Hyperswitch.Sdk/
 *   **[X] Step 8: Add `SyncPaymentStatusAsync` method to `PaymentService.cs` and update sample.**
     *   *Content:* Added `SyncPaymentStatusAsync` with `forceSync` parameter. Updated `Program.cs` to call it.
     *   *Status:* **COMPLETED**.
+
+**Phase 2: Expanding PaymentService and Adding Other Services**
+*   **[X] Step 9: Add `ConfirmPaymentAsync`, `CapturePaymentAsync`, `UpdatePaymentAsync`, `CancelPaymentAsync` to `PaymentService.cs`.**
+    *   *Models:* `PaymentConfirmRequest.cs`, `PaymentCaptureRequest.cs`, `PaymentUpdateRequest.cs`, `PaymentCancelRequest.cs`.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 10: Implement `RefundService` with CRUD operations.**
+    *   *Models:* `RefundCreateRequest.cs`, `RefundResponse.cs`, `RefundUpdateRequest.cs`, `RefundListRequest.cs`, `RefundListResponse.cs`.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 11: Implement `CustomerService` with CRUD operations.**
+    *   *Models:* `CustomerRequest.cs`, `CustomerResponse.cs`, `CustomerUpdateRequest.cs`, `CustomerDeleteResponse.cs`, `CustomerListRequest.cs`, `CustomerListResponse.cs`, `CustomerPaymentMethodListResponse.cs`, `CustomerPaymentMethod.cs`, `CardSummary.cs`.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 12: Implement `MerchantService` for listing payment methods.**
+    *   *Models:* `MerchantPMLRequest.cs`, `MerchantPMLResponse.cs` (and its dependencies like `PaymentMethodGroup.cs`, `PaymentMethodTypeDetails.cs` - though these were later refactored).
+    *   *Status:* **COMPLETED**.
+
+**Phase 3: Model Refinement and Mandate/Recurring Payments**
+*   **[X] Step 13: Refactor shared/nested models into individual files.**
+    *   *Details:* Moved classes like `Address`, `CardDetails`, `BrowserInfo`, etc., from `PaymentIntentRequest.cs` into their own files under `Models/`.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 14: Align SDK models with OpenAPI specification.**
+    *   *Details:* Reviewed and updated properties for `PaymentIntentRequest`, `PaymentIntentResponse`, `PaymentConfirmRequest`, `PaymentCaptureRequest`, `RefundCreateRequest`, `RefundResponse`, `CustomerRequest`, `CustomerResponse`, `CustomerDeleteResponse`, etc., to match OpenAPI spec more closely. This included adding missing properties and adjusting types/nullability.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 15: Implement Mandate Payment Flow.**
+    *   *Models Added/Updated:*
+        *   `PaymentIntentRequest.cs`: Added `SetupFutureUsage`, `MandateData`, `OffSession`, `RecurringDetails`.
+        *   `MandateData.cs`: Created with `CustomerAcceptance`, `OnlineMandate`, `MandateType`, `MandateAmountData`.
+        *   `RecurringDetailsInfo.cs`: Created.
+    *   *Sample App:* Added `TestMandatePaymentFlowAsync` to `Program.cs` to demonstrate CIT setup and MIT execution.
+    *   *Status:* **COMPLETED**.
+*   **[X] Step 16: Refine `MerchantPMLResponse` structure (partially reverted).**
+    *   *Details:* Attempted to align `MerchantPMLResponse` with `PaymentMethodListResponse` schema from OpenAPI, creating `ResponsePaymentMethodsEnabled.cs` and `ResponsePaymentMethodTypes.cs`. This was later reverted by user request to keep the existing simpler structure (`PaymentMethodGroup`, `PaymentMethodTypeDetails`) for this specific response, focusing instead on the mandate flow.
+    *   *Status:* **PARTIALLY COMPLETED & REVERTED**. The mandate flow itself is complete.
 
 **(Further phases for more APIs and enhancements will be added here)**

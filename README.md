@@ -106,7 +106,8 @@ public class MyHyperswitchService
 // ); 
 // await hyperswitchService.CreateSomePayment();
 ```
-**Note:** Always use the Sandbox URL (`https://sandbox.hyperswitch.io`) for testing and development. Replace it with the live URL for production environments.
+**Note:** Always use the Sandbox URL (`https://sandbox.hyperswitch.io`) for testing and development. Replace it with the live URL for production environments. 
+When running examples that involve card payments (e.g., providing `PaymentMethodData` with `CardDetails`), ensure you use valid test card numbers to simulate different scenarios successfully.
 
 ## Core Concepts
 
@@ -151,9 +152,63 @@ Manages payment intents.
             Currency = "USD",
             Confirm = true, // Attempt to confirm immediately
             // ProfileId = "prof_specific", // Overrides default if set
-            // ... other parameters like PaymentMethodData, CustomerId, ReturnUrl
+            Description = "Standard one-time payment",
+            Email = "customer@example.com",
+            PaymentMethod = "card", // Example
+            PaymentMethodData = new PaymentMethodData { /* ... */ }
+            // ... other parameters like ReturnUrl
         };
         PaymentIntentResponse? payment = await Payments.CreateAsync(paymentRequest);
+        ```
+    *   **Example for Mandate Setup (Initial CIT):**
+        ```csharp
+        var mandateSetupRequest = new PaymentIntentRequest
+        {
+            Amount = 1000,
+            Currency = "USD",
+            Confirm = true,
+            CustomerId = "cus_xxxxxxxxxxxx", // Required for saving payment method
+            SetupFutureUsage = "off_session", // Indicates intent to save for future off-session use
+            Description = "Initial payment for setting up a mandate",
+            PaymentMethod = "card",
+            PaymentMethodType = "credit",
+            PaymentMethodData = new PaymentMethodData { /* ... card details ... */ },
+            AuthenticationType = "no_three_ds", // Or other appropriate types
+            ReturnUrl = "https://example.com/mandate_setup_return",
+            MandateData = new MandateData
+            {
+                CustomerAcceptance = new CustomerAcceptance 
+                { 
+                    AcceptanceType = "online", // or "offline"
+                    // Online = new OnlineMandate { IpAddress = "x.x.x.x", UserAgent = "..." } // If online
+                },
+                MandateType = new MandateType 
+                { 
+                    MultiUse = new MandateAmountData { Amount = 0, Currency = "USD" } // For generic multi-use
+                }
+            },
+            BrowserInfo = new BrowserInfo { /* ... browser details ... */ }
+        };
+        PaymentIntentResponse? mandateSetupResponse = await Payments.CreateAsync(mandateSetupRequest);
+        // Store mandateSetupResponse.PaymentMethodId for subsequent payments.
+        ```
+    *   **Example for Subsequent Mandate Payment (MIT):**
+        ```csharp
+        var recurringPaymentRequest = new PaymentIntentRequest
+        {
+            Amount = 1500, // Amount for this specific recurring charge
+            Currency = "USD",
+            Confirm = true,
+            CustomerId = "cus_xxxxxxxxxxxx", // Same customer
+            OffSession = true, // Indicates this is an MIT
+            RecurringDetails = new RecurringDetailsInfo
+            {
+                Type = "payment_method_id",
+                Data = "pm_xxxxxxxxxxxxxx" // The PaymentMethodId from mandateSetupResponse
+            },
+            Description = "Recurring subscription charge"
+        };
+        PaymentIntentResponse? recurringPayment = await Payments.CreateAsync(recurringPaymentRequest);
         ```
 *   **`RetrieveAsync(string paymentId)`**: Gets payment details.
 *   **`SyncPaymentStatusAsync(string paymentId, bool forceSync = false)`**: Gets latest payment status.
