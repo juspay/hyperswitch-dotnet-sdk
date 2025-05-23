@@ -880,11 +880,10 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine($"\nPart B: Testing Subsequent Mandate Payment (MIT) using Predefined IDs...");
             Console.WriteLine($"  Using existing successful CIT Payment ID: {mitPaymentIdToSync}");
             Console.WriteLine($"  Using associated Customer ID for MIT: {mitAssociatedCustomerId}");
+            // Uncomment the code below to test an MIT (Merchant Initiated Transaction)
 
-            PaymentIntentResponse? existingCitPayment = null;
-            string? mitPaymentMethodToken = null;
-
-            // Uncomment the line below to test an MIT (Merchant Initiated Transaction)
+            // PaymentIntentResponse? existingCitPayment = null;
+            // string? mitPaymentMethodToken = null;
 
             // try
             // {
