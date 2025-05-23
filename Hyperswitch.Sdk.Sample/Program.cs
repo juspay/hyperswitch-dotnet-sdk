@@ -19,9 +19,9 @@ namespace Hyperswitch.Sdk.Sample
         {
             Console.WriteLine("Hyperswitch SDK Sample - Full Test Suite");
             
-            string secretKey = "snd_Hk5y3lDZtnUoEr9liTaU7xiyrisfX6pxFfMNEpjiF6YiqJs574PPSY4yKjNAT19t"; 
-            string publishableKey = "pk_snd_5f0dc084ba1045d5a04925eb943161f9";
-            string defaultProfileId = "pro_QqM6TOJtfvsbp6VSvhIn";
+            string secretKey = "API_KEY_HERE"; 
+            string publishableKey = "PUBLISHABLE_KEY_HERE";
+            string defaultProfileId = "PROFILE_ID_HERE";
 
             var client = new HyperswitchClient(secretKey: secretKey, publishableKey: publishableKey, defaultProfileId: defaultProfileId);
             var paymentService = new PaymentService(client);
