@@ -175,18 +175,11 @@ Manages payment intents.
             PaymentMethodData = new PaymentMethodData { /* ... card details ... */ },
             AuthenticationType = "no_three_ds", // Or other appropriate types
             ReturnUrl = "https://example.com/mandate_setup_return",
-            MandateData = new MandateData
-            {
-                CustomerAcceptance = new CustomerAcceptance 
+            CustomerAcceptance = new CustomerAcceptance 
                 { 
-                    AcceptanceType = "online", // or "offline"
+                    AcceptanceType = "offline", // or "online"
                     // Online = new OnlineMandate { IpAddress = "x.x.x.x", UserAgent = "..." } // If online
                 },
-                MandateType = new MandateType 
-                { 
-                    MultiUse = new MandateAmountData { Amount = 0, Currency = "USD" } // For generic multi-use
-                }
-            },
             BrowserInfo = new BrowserInfo { /* ... browser details ... */ }
         };
         PaymentIntentResponse? mandateSetupResponse = await Payments.CreateAsync(mandateSetupRequest);
