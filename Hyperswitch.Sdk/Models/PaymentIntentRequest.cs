@@ -13,7 +13,7 @@ namespace Hyperswitch.Sdk.Models
         /// Gets or sets the amount to be charged, in the smallest currency unit (e.g., cents for USD).
         /// </summary>
         [JsonPropertyName("amount")]
-        public long? Amount { get; set; } 
+        public long? Amount { get; set; }
 
         /// <summary>
         /// Gets or sets the three-letter ISO currency code.
@@ -39,7 +39,7 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("description")]
         public string? Description { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the payer's full name.
         /// </summary>
@@ -51,12 +51,12 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("email")]
         public string? Email { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the phone number of the customer.
         /// </summary>
         [JsonPropertyName("phone")]
-        public string? Phone {get; set; }
+        public string? Phone { get; set; }
 
         /// <summary>
         /// Gets or sets the country code for the customer's phone number.
@@ -76,21 +76,21 @@ namespace Hyperswitch.Sdk.Models
         /// Possible values: "automatic" (default), "manual".
         /// </summary>
         [JsonPropertyName("capture_method")]
-        public string? CaptureMethod { get; set; } 
+        public string? CaptureMethod { get; set; }
 
         /// <summary>
         /// Gets or sets the specific date and time to capture the payment (ISO 8601 format, e.g., "2029-09-10T10:11:12Z").
         /// Used when CaptureMethod is "manual" and a future capture is desired.
         /// </summary>
         [JsonPropertyName("capture_on")]
-        public string? CaptureOn { get; set; } 
+        public string? CaptureOn { get; set; }
 
         /// <summary>
         /// Gets or sets the amount to capture. If not provided, the full amount of the payment intent is captured.
         /// </summary>
         [JsonPropertyName("amount_to_capture")]
         public long? AmountToCapture { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the URL to redirect your customer back to after they authenticate on the payment processor's page.
         /// </summary>
@@ -101,26 +101,26 @@ namespace Hyperswitch.Sdk.Models
         /// Gets or sets the type of authentication to use for the payment (e.g., "no_three_ds").
         /// </summary>
         [JsonPropertyName("authentication_type")]
-        public string? AuthenticationType { get; set; } 
+        public string? AuthenticationType { get; set; }
 
         /// <summary>
         /// Gets or sets the primary payment method type (e.g., "card").
         /// </summary>
         [JsonPropertyName("payment_method")]
-        public string? PaymentMethod { get; set; } 
+        public string? PaymentMethod { get; set; }
 
         /// <summary>
         /// Gets or sets the specific payment method subtype (e.g., "credit", "debit").
         /// </summary>
         [JsonPropertyName("payment_method_type")]
-        public string? PaymentMethodType { get; set; } 
+        public string? PaymentMethodType { get; set; }
 
         /// <summary>
         /// Gets or sets the payment method data.
         /// </summary>
         [JsonPropertyName("payment_method_data")]
         public PaymentMethodData? PaymentMethodData { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the shipping address for the order.
         /// </summary>
@@ -152,7 +152,7 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("order_details")]
         public List<OrderDetailItem>? OrderDetails { get; set; }
-        
+
         /// <summary>
         /// Gets or sets a value indicating whether to create a payment link.
         /// </summary>
@@ -183,7 +183,16 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("recurring_details")]
         public RecurringDetailsInfo? RecurringDetails { get; set; }
+        
+        /// <summary>
+        /// Gets or sets customer acceptance details directly at the top level of the request.
+        /// This may be used for specific connector requirements (e.g., Stripe) as an alternative
+        /// to providing it within MandateData.CustomerAcceptance.
+        /// </summary>
+        [JsonPropertyName("customer_acceptance")]
+        public CustomerAcceptance? CustomerAcceptance { get; set; }
     }
+    
 
     /// <summary>
     /// Represents the data for a specific payment method.
