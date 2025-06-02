@@ -41,12 +41,26 @@ namespace Hyperswitch.Sdk
         /// </summary>
         internal string? DefaultProfileId { get; private set; }
 
-        private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
+        private static JsonSerializerOptions JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        };
+            get
+            {
+                var ser = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                };
+
+                // HS api expect enum values in snake_case_lower format,
+                // so we add a converter to handle this for enums.
+                ser.Converters.Add(
+                    new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
+
+                return ser;
+            }
+        }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HyperswitchClient"/> class.
