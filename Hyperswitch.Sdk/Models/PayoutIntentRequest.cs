@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.Serialization;
-using System.Text.Json.Serialization;
 
 namespace Hyperswitch.Sdk.Models;
 
@@ -42,7 +38,7 @@ public class PayoutIntentRequest
     /// Type of payout.
     /// </summary>
     [Required]
-    public required PayoutType PayoutType { get; set; }
+    public required string PayoutType { get; set; }
 
     /// <summary>
     /// Data related to payout method.
@@ -93,7 +89,7 @@ public class PayoutIntentRequest
     /// <summary>
     /// Legal entity type.
     /// </summary>
-    public EntityType? EntityType { get; set; }
+    public string? EntityType { get; set; }
 
     /// <summary>
     /// Is this a recurring payout?
@@ -118,7 +114,7 @@ public class PayoutIntentRequest
     /// <summary>
     /// Payout processing priority.
     /// </summary>
-    public Priority? Priority { get; set; }
+    public string? Priority { get; set; }
 
     /// <summary>
     /// Generate payout link.
@@ -170,7 +166,7 @@ public class Routing
     /// Routing method type.
     /// </summary>
     [Required]
-    public required RoutingType Type { get; set; }
+    public required string Type { get; set; }
 
     /// <summary>
     /// Routing configuration details.
@@ -448,76 +444,4 @@ public class PayoutLinkConfig
     /// Whether test mode is enabled.
     /// </summary>
     public bool TestMode { get; set; }
-}
-/// <summary>
-/// Supported payout types.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum PayoutType
-{
-    /// <summary>
-    /// Card-based payout.
-    /// </summary>
-    Card,
-
-    /// <summary>
-    /// Bank transfer payout.
-    /// </summary>
-    Bank,
-
-    /// <summary>
-    /// Wallet-based payout.
-    /// </summary>
-    Wallet
-}
-
-/// <summary>
-/// Routing method type.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum RoutingType
-{
-    /// <summary>
-    /// Use a single routing connector.
-    /// </summary>
-    Single,
-
-    /// <summary>
-    /// Use multiple connectors based on rules.
-    /// </summary>
-    Multiple
-}
-
-/// <summary>
-/// Legal entity type.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum EntityType
-{
-    /// <summary>
-    /// An individual person.
-    /// </summary>
-    Individual,
-
-    /// <summary>
-    /// A registered company.
-    /// </summary>
-    Company
-}
-
-/// <summary>
-/// Payout processing priority.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum Priority
-{
-    /// <summary>
-    /// Fastest possible processing.
-    /// </summary>
-    Instant,
-
-    /// <summary>
-    /// Standard processing time.
-    /// </summary>
-    Standard
 }
