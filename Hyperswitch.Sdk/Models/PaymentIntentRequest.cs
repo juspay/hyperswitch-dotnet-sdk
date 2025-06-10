@@ -218,6 +218,12 @@ namespace Hyperswitch.Sdk.Models
     public class CardDetails
     {
         /// <summary>
+        /// Gets or sets the card holder name.
+        /// </summary>
+        [JsonPropertyName("card_holder_name")] 
+        public string? CardHolderName { get; set; }
+
+        /// <summary>
         /// Gets or sets the card number.
         /// </summary>
         [JsonPropertyName("card_number")] 

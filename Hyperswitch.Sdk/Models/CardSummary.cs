@@ -35,6 +35,12 @@ namespace Hyperswitch.Sdk.Models
         /// Gets or sets the tokenization status of the card.
         /// </summary>
         [JsonPropertyName("tokenization_status")]
-        public string? TokenizationStatus { get; set; } 
+        public string? TokenizationStatus { get; set; }
+
+        /// <summary>
+        /// Gets or sets the card holder name.
+        /// </summary>
+        [JsonPropertyName("card_holder_name")]
+        public string? CardHolderName { get; set; }
     }
 }
