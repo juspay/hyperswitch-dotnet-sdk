@@ -15,7 +15,7 @@ namespace Hyperswitch.Sdk.Sample
         {
             Console.WriteLine("Hyperswitch SDK Sample - Full Test Suite");
 
-            string secretKey = "API_KEY_HERE"; 
+            string secretKey = "API_KEY_HERE";
             string publishableKey = "PUBLISHABLE_KEY_HERE";
             string defaultProfileId = "PROFILE_ID_HERE";
 
@@ -24,6 +24,7 @@ namespace Hyperswitch.Sdk.Sample
             var refundService = new RefundService(client);
             var customerService = new CustomerService(client);
             var merchantService = new MerchantService(client);
+            var payoutService = new PayoutService(client);
 
             var createdPaymentIds = new List<string?>();
             RefundResponse? lastCreatedRefund = null;
@@ -104,6 +105,9 @@ namespace Hyperswitch.Sdk.Sample
 
             Console.WriteLine($"\n--- SCENARIO 14 & 15: CREATE, DELETE, AND VERIFY DELETION OF A TEMPORARY CUSTOMER ---");
             await TestDeleteCustomerAsync(customerService); // This is now self-contained
+
+            Console.WriteLine("\n--- SCENARIO 19: PAYOUT TESTS ---");
+            await TestPayoutFlowAsync(payoutService);
 
             client.Dispose();
         }
@@ -1035,6 +1039,164 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine($"An unexpected error occurred {flowContext}: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
             Console.ResetColor();
+        }
+
+        static async Task TestPayoutFlowAsync(PayoutService payoutService)
+        {
+            Console.WriteLine("  Testing Payout Intent creation with different payout methods...");
+
+            // Test 1: Bank Transfer Payout
+            await TestBankTransferPayoutAsync(payoutService);
+
+            // Test 2: Card Payout
+            await TestCardPayoutAsync(payoutService);
+        }
+
+        static async Task TestBankTransferPayoutAsync(PayoutService payoutService)
+        {
+            Console.WriteLine("\n    1. Testing Bank Transfer Payout...");
+            try
+            {
+                var payoutRequest = new PayoutIntentRequest
+                {
+                    Amount = 5000, // $50.00
+                    Currency = "USD",
+                    PayoutType = "bank",
+                    Description = "Bank transfer payout test",
+                    Email = "recipient@example.com",
+                    Name = "John Doe",
+                    PayoutMethodData = new PayoutMethodData
+                    {
+                        Bank = new Bank
+                        {
+                            Iban = "NL91ABNA0417164300",
+                            Bic = "ABNANL2A",
+                            BankName = "Test Bank",
+                            BankCity = "New York",
+                            BankCountryCode = "US"
+                        }
+                    },
+                    Billing = new Billing
+                    {
+                        Address = new PayoutAddress
+                        {
+                            Line1 = "123 Payout Street",
+                            City = "PayoutCity",
+                            State = "NY",
+                            Zip = "10001",
+                            Country = "US"
+                        }
+                    },
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "test_type", "bank_transfer_payout" },
+                        { "scenario", "payout_test_1" }
+                    }
+                };
+
+                PayoutIntentResponse? payoutResponse = await payoutService.CreateAsync(payoutRequest);
+                PrintPayoutDetails("    Bank Transfer Payout Created", payoutResponse);
+            }
+            catch (HyperswitchApiException apiEx)
+            {
+                PrintApiError(apiEx, "in bank transfer payout creation");
+            }
+            catch (Exception ex)
+            {
+                PrintGenericError(ex, "in bank transfer payout creation");
+            }
+        }
+
+        static async Task TestCardPayoutAsync(PayoutService payoutService)
+        {
+            Console.WriteLine("\n    2. Testing Card Payout...");
+            try
+            {
+                var payoutRequest = new PayoutIntentRequest
+                {
+                    Amount = 2500, // $25.00
+                    Currency = "USD",
+                    PayoutType = "card",
+                    Description = "Card payout test",
+                    Email = "cardholder@example.com",
+                    Name = "Jane Smith",
+                    PayoutMethodData = new PayoutMethodData
+                    {
+                        Card = new Card
+                        {
+                            CardNumber = "4111111111111111",
+                            ExpiryMonth = "12",
+                            ExpiryYear = "2030",
+                            CardHolderName = "Jane Smith"
+                        }
+                    },
+                    Billing = new Billing
+                    {
+                        Address = new PayoutAddress
+                        {
+                            Line1 = "456 Card Avenue",
+                            City = "CardCity",
+                            State = "CA",
+                            Zip = "90210",
+                            Country = "US"
+                        }
+                    },
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "test_type", "card_payout" },
+                        { "scenario", "payout_test_2" }
+                    }
+                };
+
+                PayoutIntentResponse? payoutResponse = await payoutService.CreateAsync(payoutRequest);
+                PrintPayoutDetails("    Card Payout Created", payoutResponse);
+            }
+            catch (HyperswitchApiException apiEx)
+            {
+                PrintApiError(apiEx, "in card payout creation");
+            }
+            catch (Exception ex)
+            {
+                PrintGenericError(ex, "in card payout creation");
+            }
+        }
+
+        static void PrintPayoutDetails(string stage, PayoutIntentResponse? payout)
+        {
+            if (payout == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"{stage}: Payout response is null.");
+                Console.ResetColor();
+                return;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"{stage}:");
+            Console.ResetColor();
+            Console.WriteLine($"    Payout ID: {payout.PayoutId}");
+            Console.WriteLine($"    Status: {payout.Status}");
+            Console.WriteLine($"    Amount: {payout.Amount} {payout.Currency}");
+            Console.WriteLine($"    Description: {payout.Description}");
+            Console.WriteLine($"    Customer ID: {payout.CustomerId}");
+            Console.WriteLine($"    Email: {payout.Email}");
+            Console.WriteLine($"    Payout Method Type: {payout.PayoutMethodType}");
+            Console.WriteLine($"    Created: {payout.Created}");
+            Console.WriteLine($"    Updated: {payout.Updated}");
+
+            if (payout.Billing != null)
+            {
+                Console.WriteLine($"    Billing Address: {payout.Billing.Line1}, {payout.Billing.City}, {payout.Billing.State} {payout.Billing.Zip}, {payout.Billing.Country}");
+            }
+
+            if (payout.Metadata != null && payout.Metadata.Any())
+            {
+                Console.WriteLine("    Metadata:");
+                foreach (var meta in payout.Metadata)
+                {
+                    Console.WriteLine($"      {meta.Key}: {meta.Value}");
+                }
+            }
         }
     }
 }
