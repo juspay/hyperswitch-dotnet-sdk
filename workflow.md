@@ -9,7 +9,7 @@ Generate a robust and easy-to-use .NET Server-Side SDK to interact with Hyperswi
 *   **Primary HTTP Client:** `System.Net.Http.HttpClient`
 *   **JSON Serialization:** `System.Text.Json`
 *   **Authentication:** API Secret Key via `api-key` header (Updated from Authorization: Bearer). Publishable key also supported.
-*   **API Focus:** Payments (Create, Retrieve, Confirm, Capture, Update, Cancel, Mandates/Recurring), Refunds, Customers, Merchant Payment Methods.
+*   **API Focus:** Payments (Create, Retrieve, Confirm, Capture, Update, Cancel, Mandates/Recurring), Refunds, Customers, Merchant Payment Methods, Payouts.
 *   **Error Handling:** Custom `HyperswitchApiException` for API errors.
 *   **Project Type:** .NET Class Library
 
@@ -25,6 +25,7 @@ Hyperswitch.Sdk/
 |   |-- (others as needed)
 |-- Services/                  # Service classes per API resource
 |   |-- PaymentService.cs
+|   |-- PayoutService.cs
 |   |-- (others as needed)
 |-- Exceptions/                # Custom exceptions
 |   |-- HyperswitchApiException.cs
@@ -92,5 +93,16 @@ Hyperswitch.Sdk/
 *   **[X] Step 16: Refine `MerchantPMLResponse` structure (partially reverted).**
     *   *Details:* Attempted to align `MerchantPMLResponse` with `PaymentMethodListResponse` schema from OpenAPI, creating `ResponsePaymentMethodsEnabled.cs` and `ResponsePaymentMethodTypes.cs`. This was later reverted by user request to keep the existing simpler structure (`PaymentMethodGroup`, `PaymentMethodTypeDetails`) for this specific response, focusing instead on the mandate flow.
     *   *Status:* **PARTIALLY COMPLETED & REVERTED**. The mandate flow itself is complete.
+
+**Phase 4: Payout API Implementation**
+*   **[X] Step 17: Implement `PayoutService` with payout intent creation.**
+    *   *Models:* `PayoutIntentRequest.cs`, `PayoutIntentResponse.cs` with comprehensive payout data structures including bank transfer and card payout methods.
+    *   *Service:* `PayoutService.cs` with `CreateAsync` method for payout intent creation.
+    *   *Sample App:* Added payout test scenarios to `Program.cs` demonstrating:
+        *   Bank transfer payouts with account and routing numbers
+        *   Card payouts with card details
+        *   Customer-associated payouts with billing information
+        *   Comprehensive error handling and response formatting
+    *   *Status:* **COMPLETED**.
 
 **(Further phases for more APIs and enhancements will be added here)**
