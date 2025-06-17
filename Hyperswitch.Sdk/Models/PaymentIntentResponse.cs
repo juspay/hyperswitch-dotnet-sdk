@@ -151,6 +151,24 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("updated")]
         public string? Updated { get; set; } 
+
+        /// <summary>
+        /// Gets or sets the top-level error code from the payment processor, if any.
+        /// </summary>
+        [JsonPropertyName("error_code")]
+        public string? ErrorCode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the top-level human-readable error message from the payment processor, if any.
+        /// </summary>
+        [JsonPropertyName("error_message")]
+        public string? ErrorMessage { get; set; }
+
+        /// <summary>
+        /// Gets or sets additional data returned by the API that is not explicitly mapped to other properties.
+        /// </summary>
+        [JsonExtensionData]
+        public Dictionary<string, object>? ExtensionData { get; set; }
     }
 
     /// <summary>

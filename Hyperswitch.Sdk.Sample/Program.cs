@@ -305,7 +305,7 @@ namespace Hyperswitch.Sdk.Sample
                 PrintPaymentDetails("  5. After Payment Confirmation", paymentIntent);
 
                 if (paymentIntent.Status == "requires_customer_action")
-                { Console.WriteLine($"    Payment requires customer action. Redirect to: {paymentIntent.NextAction?.RedirectToUrl}"); }
+                { Console.WriteLine($"    Payment requires customer action. Redirect to: {(paymentIntent.NextAction != null ? paymentIntent.NextAction.RedirectToUrl : "N/A")}"); }
                 else if (paymentIntent.Status == "succeeded")
                 { Console.WriteLine("    Payment succeeded!"); }
             }
