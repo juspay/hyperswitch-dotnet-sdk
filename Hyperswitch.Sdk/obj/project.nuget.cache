@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xxKqxbPg9iI=",
+  "dgSpecHash": "9/0NcLVAQk0=",
   "success": true,
-  "projectFilePath": "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
+  "projectFilePath": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

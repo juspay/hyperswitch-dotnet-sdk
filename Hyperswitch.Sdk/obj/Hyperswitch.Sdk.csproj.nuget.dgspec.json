@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {}
+    "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {}
   },
   "projects": {
-    "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {
+    "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {
       "version": "1.0.0-alpha",
       "restore": {
-        "projectUniqueName": "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
+        "projectUniqueName": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
         "projectName": "Hyperswitch.Sdk",
-        "projectPath": "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
+        "projectPath": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
         "packagesPath": "/Users/sweta.sharma/.nuget/packages/",
-        "outputPath": "/Users/sweta.sharma/Desktop/Juspay/sdk-final/server-side-sdk/Hyperswitch.Sdk/obj/",
+        "outputPath": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/sweta.sharma/.nuget/NuGet/NuGet.Config"
