@@ -124,5 +124,23 @@ namespace Hyperswitch.Sdk.Services
             
             return await _client.GetAsync<CustomerPaymentMethodListResponse>(requestUrl);
         }
+
+        /// <summary>
+        /// Lists the saved payment methods for a customer in the context of a specific payment intent's client_secret.
+        /// </summary>
+        /// <param name="clientSecret">The client_secret of the payment intent.</param>
+        /// <returns>A response object containing a list of the customer's saved payment methods relevant to the payment context.</returns>
+        public async Task<CustomerPaymentMethodListResponse?> ListPaymentMethodsForClientSecretAsync(string clientSecret)
+        {
+            if (string.IsNullOrWhiteSpace(clientSecret))
+                throw new System.ArgumentNullException(nameof(clientSecret));
+
+            // Based on cURL: {{baseUrl}}/customers/payment_methods?client_secret=...
+            // The path is "customers/payment_methods" with a query parameter.
+            string requestUrl = $"customers/payment_methods?client_secret={System.Uri.EscapeDataString(clientSecret)}";
+            
+            // Use ApiKeyType.Publishable for this specific endpoint as per cURL provided by user.
+            return await _client.GetAsync<CustomerPaymentMethodListResponse>(requestUrl, ApiKeyType.Publishable);
+        }
     }
 }

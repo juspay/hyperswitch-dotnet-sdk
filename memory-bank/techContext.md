@@ -47,3 +47,59 @@
 *   **Git:** For version control.
 *   **IDE Debuggers:** For stepping through code and troubleshooting issues in the SDK, Sample App, or Demo API.
 *   **API Clients (Postman, etc.):** Essential for manually testing the `Hyperswitch.Sdk.DemoApi` endpoints by crafting and sending HTTP requests.
+# Tech Context
+
+## Technologies Used
+- **Language:** C#
+- **Framework:** .NET (likely .NET Standard or .NET Core for broad compatibility)
+- **HTTP Client:** `System.Net.Http.HttpClient`
+- **JSON Handling:** `System.Text.Json` (preferred for modern .NET) or `Newtonsoft.Json`
+- **IDE:** Visual Studio or VS Code with C# extensions
+- **Build Tool:** MSBuild (via `dotnet` CLI)
+- **Version Control:** Git
+
+## Development Setup
+- .NET SDK installed (version depends on project target)
+- A C# compatible IDE (Visual Studio, VS Code, Rider)
+- Access to Hyperswitch API (potentially a sandbox environment for testing)
+- API Key for Hyperswitch
+
+## Technical Constraints
+- Must be compatible with common .NET versions.
+- Network connectivity required to interact with the Hyperswitch API.
+- API rate limits imposed by Hyperswitch server.
+- Adherence to Hyperswitch API versioning and contracts.
+
+## Dependencies
+- **Primary:** `System.Net.Http`, `System.Text.Json` (or `Newtonsoft.Json`).
+- **Testing (Potentially):** MSTest, NUnit, or xUnit for unit tests. Moq or NSubstitute for mocking.
+- No external runtime dependencies beyond the .NET framework itself for the core SDK. The Sample/Demo projects might have more.
+
+## Tool Usage Patterns
+- **`HyperswitchClient` Initialization:**
+  ```csharp
+  var hyperswitch = new HyperswitchClient("YOUR_API_KEY", "OPTIONAL_BASE_URL");
+  ```
+- **Service Access:**
+  ```csharp
+  var paymentService = hyperswitch.Payment;
+  var customerService = hyperswitch.Customer;
+  ```
+- **API Calls (Example - Create Payment):**
+  ```csharp
+  var paymentIntentRequest = new PaymentIntentRequest { /* ... populate properties ... */ };
+  try
+  {
+      PaymentIntentResponse response = await paymentService.CreateAsync(paymentIntentRequest);
+      // Process response
+  }
+  catch (HyperswitchApiException ex)
+  {
+      // Handle API errors
+  }
+  catch (Exception ex)
+  {
+      // Handle other errors
+  }
+  ```
+- **Model Usage:** Request and response objects are strongly typed, defined in `Hyperswitch.Sdk.Models`.

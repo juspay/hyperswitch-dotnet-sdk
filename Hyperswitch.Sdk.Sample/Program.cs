@@ -6,6 +6,7 @@ using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Models;
 using Hyperswitch.Sdk.Services;
 using Hyperswitch.Sdk.Exceptions;
+using System.Text.Json;
 
 namespace Hyperswitch.Sdk.Sample
 {
@@ -70,10 +71,10 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine("Listing general refunds (limit 3)...");
             await TestListRefundsAsync(refundService, limit: 3);
 
-            Console.WriteLine("\n--- SCENARIO 10: CREATE CUSTOMER (Main Test Customer) ---");
+            Console.WriteLine("\n--- SCENARIO 9: CREATE CUSTOMER (Main Test Customer) ---");
             createdTestCustomerId = await TestCreateCustomerAsync(customerService); // This customer is used for several scenarios
 
-            Console.WriteLine($"\n--- SCENARIO 18: MANDATE PAYMENT FLOW ---");
+            Console.WriteLine($"\n--- SCENARIO 10: MANDATE PAYMENT FLOW ---");
             // Part A of Mandate Flow uses createdTestCustomerId
             await TestMandatePaymentFlowAsync(paymentService, customerService, createdTestCustomerId);
 
@@ -88,24 +89,249 @@ namespace Hyperswitch.Sdk.Sample
                 Console.WriteLine($"\n--- SCENARIO 13: LIST CUSTOMERS ---");
                 await TestListCustomersAsync(customerService);
 
-                Console.WriteLine($"\n--- SCENARIO 9 (REVISED): LIST CUSTOMER PAYMENT METHODS (Main Test Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 14: LIST CUSTOMER PAYMENT METHODS (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPaymentMethodsAsync(customerService, createdTestCustomerId);
 
-                Console.WriteLine($"\n--- SCENARIO 16: FULL PAYMENT FLOW WITH PM SELECTION (Main Test Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 15: FULL PAYMENT FLOW WITH PM SELECTION (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestFullPaymentFlowWithPMSelection(paymentService, customerService, merchantService, createdTestCustomerId);
 
-                Console.WriteLine($"\n--- SCENARIO 17: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Main Test Customer: {createdTestCustomerId}) ---");
+                Console.WriteLine($"\n--- SCENARIO 16: LIST SAVED PMS FOR CUSTOMER ASSOCIATED WITH A PAYMENT (Main Test Customer: {createdTestCustomerId}) ---");
                 await TestListCustomerPMsFromPaymentContext(paymentService, customerService, createdTestCustomerId);
 
                 // Note: Deletion of createdTestCustomerId is not explicitly done here as it might have active mandates.
                 // The self-contained TestDeleteCustomerAsync (Scenario 14) tests deletion independently.
             }
-            else { Console.WriteLine("\nSkipping Customer-dependent tests (Scenarios 11-13, 9, 16, 17, Part A of 18) as main customer creation failed."); }
+            else { Console.WriteLine("\nSkipping Customer-dependent tests (Scenarios 11-16, Part A of 10) as main customer creation failed."); }
 
-            Console.WriteLine($"\n--- SCENARIO 14 & 15: CREATE, DELETE, AND VERIFY DELETION OF A TEMPORARY CUSTOMER ---");
+            Console.WriteLine($"\n--- SCENARIO 17: CREATE, DELETE, AND VERIFY DELETION OF A TEMPORARY CUSTOMER ---");
             await TestDeleteCustomerAsync(customerService); // This is now self-contained
 
+            Console.WriteLine("\n--- SCENARIO 18: SAVED CARD PAYMENT FLOW ---");
+            await TestSavedCardPaymentFlowAsync(paymentService, customerService);
+
             client.Dispose();
+        }
+
+        static async Task TestSavedCardPaymentFlowAsync(PaymentService paymentService, CustomerService customerService)
+        {
+            Console.WriteLine("--- Testing Saved Card Payment Flow ---");
+            string? customerId = null;
+            PaymentIntentResponse? initialPaymentIntent = null;
+            PaymentIntentResponse? secondPaymentIntent = null;
+            string? paymentTokenForSavedCard = null;
+
+            try
+            {
+                // Step 1: Create Customer
+                Console.WriteLine("\n1. Creating a new customer for saved card flow...");
+                var customerRequest = new CustomerRequest
+                {
+                    Email = $"savedcard.customer.{Guid.NewGuid().ToString().Substring(0, 6)}@example.com",
+                    Name = "SavedCard TestUser",
+                    Phone = "1234567890",
+                    Description = "Customer for saved card payment flow",
+                    Address = new AddressDetails { Line1 = "12 SavedCard St", City = "Tokenville", Country = "US", Zip = "54321" }
+                };
+                CustomerResponse? customer = await customerService.CreateCustomerAsync(customerRequest);
+                if (customer == null || string.IsNullOrEmpty(customer.CustomerId))
+                {
+                    PrintAndReturnError("  Failed to create customer for saved card flow.");
+                    return;
+                }
+                customerId = customer.CustomerId;
+                PrintCustomerDetails("  1. Customer Created", customer);
+
+                // Step 2: Create Initial Payment Intent (to save card)
+                Console.WriteLine($"\n2. Creating initial payment intent for customer {customerId} (to save card)...");
+                var initialPiRequest = new PaymentIntentRequest
+                {
+                    Amount = 6500,
+                    Currency = "USD",
+                    OrderDetails = new List<OrderDetailItem> { new OrderDetailItem { ProductName = "Apple iphone 15", Quantity = 1, Amount = 6500 } },
+                    Confirm = false,
+                    CaptureMethod = "automatic",
+                    AuthenticationType = "no_three_ds",
+                    SetupFutureUsage = "on_session", // Key for saving card
+                    Email = customer.Email,
+                    Description = "Initial payment to save card",
+
+                    Shipping = new Address { AddressDetails = new AddressDetails { State = "California", City = "Banglore", Country = "US", Line1 = "123 Main St", Line2 = "hsgdbhd", Line3 = "alsksoe", Zip = "571201", FirstName = "John", LastName = "Doe" }, Phone = new PhoneDetails { Number = "123456789", CountryCode = "+1" } },
+                    Billing = new Address { AddressDetails = new AddressDetails { Line1 = "1467", City = "San Fransico", State = "California", Zip = "94122", Country = "US", FirstName = "joseph", LastName = "Doe" }, Phone = new PhoneDetails { Number = "8056594427", CountryCode = "+91" } },
+                    CustomerId = customerId,
+                    Metadata = new Dictionary<string, string> { { "purpose", "save_card_initial_payment" } }
+                };
+                initialPaymentIntent = await paymentService.CreateAsync(initialPiRequest);
+                if (initialPaymentIntent == null || string.IsNullOrEmpty(initialPaymentIntent.PaymentId))
+                {
+                    PrintAndReturnError("  Failed to create initial payment intent.");
+                    return;
+                }
+                PrintPaymentDetails("  2. Initial Payment Intent Created", initialPaymentIntent);
+                string initialPaymentId = initialPaymentIntent.PaymentId;
+
+                // Step 3: Confirm Initial Payment (to save the card)
+                Console.WriteLine($"\n3. Confirming initial payment {initialPaymentId} to save the card...");
+                var confirmInitialPiRequest = new PaymentConfirmRequest
+                {
+                    ReturnUrl = "https://hyperswitch-demo-store.netlify.app/payment_return", // Example return URL
+                    PaymentMethod = "card",
+                    PaymentMethodData = new PaymentMethodData
+                    {
+                        Card = new CardDetails { CardNumber = "4111111111111111", CardExpiryMonth = "03", CardExpiryYear = "2030", CardCvc = "737", CardHolderName = "joseph Doe" /*CardIssuer and CardNetwork removed*/ },
+                        Billing = new Address { AddressDetails = new AddressDetails { State = "CA", LastName = "Doe", Country = "US", City = "San Fransico", FirstName = "joseph", Line1 = "1467", Zip = "94122" } /* Email removed from AddressDetails */ }
+                    },
+                    CustomerAcceptance = new CustomerAcceptance
+                    {
+                        AcceptanceType = "online",
+                        AcceptedAt = DateTime.UtcNow.ToString("o"), // ISO 8601 format
+                        Online = new OnlineMandate // Changed from OnlineAcceptanceDetails to OnlineMandate
+                        {
+                            UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+                            // IpAddress = "192.0.2.1" // Optional: consider adding if needed by specific flows/connectors
+                        }
+                    },
+                    // Email removed as it's not on PaymentConfirmRequest
+                    BrowserInfo = new BrowserInfo { UserAgent = "Mozilla/5.0 SDK Test", AcceptHeader = "application/json", Language = "en-GB", ColorDepth = 24, ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -330, JavaScriptEnabled = true, JavaEnabled = true }
+                };
+                initialPaymentIntent = await paymentService.ConfirmPaymentAsync(initialPaymentId, confirmInitialPiRequest);
+                if (initialPaymentIntent == null)
+                {
+                    PrintAndReturnError("  Failed to confirm initial payment.");
+                    return;
+                }
+                PrintPaymentDetails("  3. Initial Payment Confirmed", initialPaymentIntent);
+
+                // Optional: Sync until succeeded if needed (depends on connector behavior)
+                int attempts = 0;
+                while (initialPaymentIntent.Status != "succeeded" && initialPaymentIntent.Status != "failed" && initialPaymentIntent.Status != "cancelled" && attempts < 5)
+                {
+                    if (initialPaymentIntent.Status == "requires_customer_action")
+                    {
+                         Console.WriteLine($"    Payment {initialPaymentIntent.PaymentId} requires customer action. Redirect to: {initialPaymentIntent.NextAction?.RedirectToUrl}. For this test, we'll assume it eventually succeeds or can be polled.");
+                         // In a real scenario, you'd redirect. For this test, we might need to break or use a card that doesn't require 3DS.
+                         // For now, let's assume it might auto-succeed or we can poll.
+                    }
+                    Console.WriteLine($"    Syncing initial payment {initialPaymentId} (attempt {++attempts}), current status: {initialPaymentIntent.Status}...");
+                    await Task.Delay(2000); // Wait before polling
+                    initialPaymentIntent = await paymentService.SyncPaymentStatusAsync(initialPaymentId, clientSecret: initialPaymentIntent.ClientSecret, forceSync: true);
+                    if (initialPaymentIntent == null) { PrintAndReturnError("    Sync returned null for initial payment."); return; }
+                    PrintPaymentDetails($"    After Sync Attempt {attempts}", initialPaymentIntent);
+                }
+
+                if (initialPaymentIntent.Status != "succeeded")
+                {
+                    PrintAndReturnError($"  Initial payment {initialPaymentId} did not succeed (Status: {initialPaymentIntent.Status}). Cannot proceed with saved card test.");
+                    return;
+                }
+                Console.WriteLine($"  Initial payment {initialPaymentId} succeeded. Card should be saved.");
+
+
+                // Step 4: Create Second Payment Intent (for saved card payment)
+                Console.WriteLine($"\n4. Creating second payment intent for customer {customerId} (to use saved card)...");
+                var secondPiRequest = new PaymentIntentRequest
+                {
+                    Amount = 3000, // Different amount for distinction
+                    Currency = "USD",
+                    OrderDetails = new List<OrderDetailItem> { new OrderDetailItem { ProductName = "Another Item", Quantity = 1, Amount = 3000 } },
+                    Confirm = false, // Will be confirmed with payment_token
+                    CaptureMethod = "automatic",
+                    AuthenticationType = "no_three_ds", // Changed from three_ds for consistency
+                    Email = customer.Email,
+                    Description = "Payment using saved card",
+                    // ProfileId = initialPiRequest.ProfileId, // Removed to use default from HyperswitchClient
+                    Shipping = initialPiRequest.Shipping, // Reuse shipping
+                    Billing = initialPiRequest.Billing,   // Reuse billing
+                    CustomerId = customerId,
+                    Metadata = new Dictionary<string, string> { { "purpose", "saved_card_subsequent_payment" } }
+                };
+                secondPaymentIntent = await paymentService.CreateAsync(secondPiRequest);
+                if (secondPaymentIntent == null || string.IsNullOrEmpty(secondPaymentIntent.PaymentId) || string.IsNullOrEmpty(secondPaymentIntent.ClientSecret))
+                {
+                    PrintAndReturnError("  Failed to create second payment intent or ClientSecret is missing.");
+                    return;
+                }
+                PrintPaymentDetails("  4. Second Payment Intent Created", secondPaymentIntent);
+                string secondPaymentId = secondPaymentIntent.PaymentId;
+                string secondClientSecret = secondPaymentIntent.ClientSecret;
+
+                // Step 5: Fetch Customer Payment Methods to get the token
+                Console.WriteLine($"\n5. Fetching payment methods using client_secret from second payment ({secondClientSecret})...");
+                CustomerPaymentMethodListResponse? pmListResponse = await customerService.ListPaymentMethodsForClientSecretAsync(secondClientSecret);
+                if (pmListResponse == null || pmListResponse.Data == null || !pmListResponse.Data.Any())
+                {
+                    PrintAndReturnError($"  No payment methods found for customer {customerId} or failed to retrieve them.");
+                    return;
+                }
+
+                // Assuming the first card is the one we just saved. In a real app, you might need more logic to identify it.
+                var savedCard = pmListResponse.Data.FirstOrDefault(pm => pm.PaymentMethod == "card" && pm.Card?.Last4Digits == "1111"); // Match last 4 of "4111...1111"
+                if (savedCard == null || string.IsNullOrEmpty(savedCard.PaymentToken))
+                {
+                    PrintAndReturnError("  Could not find the saved card or its payment token from the list.");
+                    Console.WriteLine("  Available PMs:");
+                    foreach(var pm_data in pmListResponse.Data)
+                    {
+                        Console.WriteLine($"    Token: {pm_data.PaymentToken}, Method: {pm_data.PaymentMethod}, CardLast4: {pm_data.Card?.Last4Digits}");
+                    }
+                    return;
+                }
+                paymentTokenForSavedCard = savedCard.PaymentToken;
+                Console.WriteLine($"  Found saved card. Payment Token: {paymentTokenForSavedCard}");
+
+                // Step 6: Confirm Second Payment using Payment Token
+                Console.WriteLine($"\n6. Confirming second payment {secondPaymentId} using payment token {paymentTokenForSavedCard}...");
+                var confirmSecondPiRequest = new PaymentConfirmRequest
+                {
+                    ReturnUrl = "https://hyperswitch-demo-store.netlify.app/payment_return_saved_card",
+                    PaymentMethod = "card", // Still specify payment_method as "card"
+                    PaymentMethodToken = paymentTokenForSavedCard, // Using the token (now serializes as "payment_token")
+                    CardCvc = "737", // Using new top-level CardCvc
+                    // CustomerId removed as it's not on PaymentConfirmRequest
+                    PaymentMethodData = new PaymentMethodData // cURL for this step only had billing in payment_method_data
+                    {
+                         // Card object removed from here as CVC is top-level and token is used.
+                         Billing = new Address { AddressDetails = new AddressDetails { State = "CA", LastName = "Doe", Country = "US", City = "San Fransico", FirstName = "joseph", Line1 = "1467", Zip = "94122" } }
+                    },
+                    // Email removed as it's not on PaymentConfirmRequest
+                    BrowserInfo = new BrowserInfo { UserAgent = "Mozilla/5.0 SDK Saved Card Test", AcceptHeader = "application/json", Language = "en-GB", ColorDepth = 24, ScreenHeight = 1080, ScreenWidth = 1920, TimeZone = -330, JavaScriptEnabled = true, JavaEnabled = true }
+                };
+                secondPaymentIntent = await paymentService.ConfirmPaymentAsync(secondPaymentId, confirmSecondPiRequest);
+                if (secondPaymentIntent == null)
+                {
+                    PrintAndReturnError("  Failed to confirm second payment using saved card token.");
+                    return;
+                }
+                PrintPaymentDetails("  6. Second Payment Confirmed (using saved card)", secondPaymentIntent);
+
+                // Optional: Sync second payment
+                attempts = 0;
+                while (secondPaymentIntent.Status != "succeeded" && secondPaymentIntent.Status != "failed" && secondPaymentIntent.Status != "cancelled" && attempts < 5)
+                {
+                     if (secondPaymentIntent.Status == "requires_customer_action")
+                    {
+                         Console.WriteLine($"    Payment {secondPaymentIntent.PaymentId} requires customer action. Redirect to: {secondPaymentIntent.NextAction?.RedirectToUrl}.");
+                    }
+                    Console.WriteLine($"    Syncing second payment {secondPaymentId} (attempt {++attempts}), current status: {secondPaymentIntent.Status}...");
+                    await Task.Delay(2000);
+                    secondPaymentIntent = await paymentService.SyncPaymentStatusAsync(secondPaymentId, clientSecret: secondPaymentIntent.ClientSecret, forceSync: true);
+                     if (secondPaymentIntent == null) { PrintAndReturnError("    Sync returned null for second payment."); return; }
+                    PrintPaymentDetails($"    After Sync Attempt {attempts}", secondPaymentIntent);
+                }
+                Console.WriteLine($"  Final status for second payment {secondPaymentId}: {secondPaymentIntent.Status}");
+
+            }
+            catch (HyperswitchApiException apiEx) { PrintApiError(apiEx, "in saved card payment flow"); }
+            catch (Exception ex) { PrintGenericError(ex, "in saved card payment flow"); }
+            finally
+            {
+                // Optional: Clean up the created customer if desired, though not strictly necessary for this test.
+                // if (!string.IsNullOrEmpty(customerId))
+                // {
+                //     Console.WriteLine($"\n7. (Optional) Deleting customer {customerId}...");
+                //     await customerService.DeleteCustomerAsync(customerId);
+                //     Console.WriteLine($"  Customer {customerId} deletion attempted.");
+                // }
+            }
         }
 
         static async Task TestSpecificPaymentSyncAndRefundAsync(PaymentService paymentService, RefundService refundService, string paymentIdToTest)
@@ -267,6 +493,7 @@ namespace Hyperswitch.Sdk.Sample
 
                     var pmlRequest = new MerchantPMLRequest { ClientSecret = paymentIntent.ClientSecret };
                     MerchantPMLResponse? pmlResponse = await merchantService.ListAvailablePaymentMethodsAsync(pmlRequest);
+                            Console.WriteLine($"   pmlResponse: {System.Text.Json.JsonSerializer.Serialize(pmlResponse, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })}");
 
                     if (pmlResponse != null && pmlResponse.PaymentMethods != null && pmlResponse.PaymentMethods.Any())
                     {
@@ -996,6 +1223,14 @@ namespace Hyperswitch.Sdk.Sample
             Console.WriteLine($"  ID: {payment.PaymentId}, Status: {payment.Status}");
             Console.WriteLine($"  Amount: {payment.Amount} {payment.Currency}, Capturable: {payment.AmountCapturable}, Received: {payment.AmountReceived}");
             Console.WriteLine($"  Client Secret: {payment.ClientSecret}");
+            if (payment.ExtensionData != null && payment.ExtensionData.TryGetValue("connector", out object? connectorValue) && connectorValue != null)
+            {
+                Console.WriteLine($"  Connector: {connectorValue}");
+            }
+            else if (payment.ExtensionData != null && payment.ExtensionData.TryGetValue("payment_connector", out object? paymentConnectorValue) && paymentConnectorValue != null) // Fallback attempt
+            {
+                Console.WriteLine($"  Connector: {paymentConnectorValue}");
+            }
             if (!string.IsNullOrEmpty(payment.NextAction?.RedirectToUrl)) { Console.WriteLine($"  Next Action URL: {payment.NextAction.RedirectToUrl}"); }
             if (payment.LastPaymentError != null) { Console.WriteLine($"  Last Error: [{payment.LastPaymentError.Code}] {payment.LastPaymentError.Message}"); }
             Console.ResetColor();

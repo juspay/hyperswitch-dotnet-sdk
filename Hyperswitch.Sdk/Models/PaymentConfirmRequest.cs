@@ -25,9 +25,14 @@ namespace Hyperswitch.Sdk.Models
         /// A token representing a saved payment method. 
         /// Use this if confirming with an existing payment method for the customer.
         /// </summary>
-        [JsonPropertyName("payment_method_token")] // Assuming this is the correct JSON property name
+        [JsonPropertyName("payment_token")] // Changed from payment_method_token to match cURL
         public string? PaymentMethodToken { get; set; }
 
+        /// <summary>
+        /// Gets or sets the CVC/CVV code for the card, required when confirming with a token.
+        /// </summary>
+        [JsonPropertyName("card_cvc")]
+        public string? CardCvc { get; set; } // Added top-level CardCvc
 
         /// <summary>
         /// The URL to redirect your customer back to after they authenticate on the payment processor's page.
@@ -61,6 +66,13 @@ namespace Hyperswitch.Sdk.Models
         /// </summary>
         [JsonPropertyName("browser_info")]
         public BrowserInfo? BrowserInfo { get; set; }
+
+        /// <summary>
+        /// Gets or sets customer acceptance details.
+        /// This is required by some payment flows or for saving payment methods.
+        /// </summary>
+        [JsonPropertyName("customer_acceptance")]
+        public CustomerAcceptance? CustomerAcceptance { get; set; }
         
         // Note: ClientSecret was removed from this request model as it caused API errors.
         // AuthenticationType is also typically set at create, not confirm, unless API specifies otherwise.
