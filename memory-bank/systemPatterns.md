@@ -70,3 +70,42 @@ graph TD
 *   **Serialization/Deserialization:** JSON handling of SDK models, including `JsonExtensionData` for unmapped fields and specific error properties.
 *   **Error Handling:** Exception catching and logging in `DemoApi`; SDK's ability to deserialize comprehensive error responses.
 *   **Endpoint Mapping:** Ensuring each relevant SDK service method has a corresponding, correctly configured API endpoint with logging.
+# System Patterns
+
+## System Architecture
+- The Hyperswitch .NET SDK acts as a client library.
+- It communicates with the Hyperswitch API server over HTTPS.
+- It provides services (e.g., `PaymentService`, `CustomerService`) that encapsulate API interactions.
+- Models are used for request and response data, ensuring type safety.
+
+## Key Technical Decisions
+- Use of `HttpClient` for making HTTP requests.
+- JSON serialization/deserialization for request/response bodies.
+- Asynchronous operations (`async`/`await`) for non-blocking I/O.
+- Custom exception (`HyperswitchApiException`) for API-specific errors.
+
+## Design Patterns in Use
+- **Service Layer:** Services like `PaymentService`, `CustomerService`, `RefundService` abstract API endpoint interactions.
+- **Model-View-Controller (Implicit):** While not a UI application, the SDK uses models for data representation, services act as controllers handling logic, and the "view" is the consuming application.
+- **Factory Pattern (Potentially):** The `HyperswitchClient` could be seen as a factory or entry point for accessing various services.
+
+## Component Relationships
+- `HyperswitchClient` is the main entry point.
+- `HyperswitchClient` instantiates and provides access to various services (e.g., `PaymentService`, `CustomerService`).
+- Services use `HttpClient` (or a wrapper) to make API calls.
+- Services use request and response models defined in `Hyperswitch.Sdk.Models`.
+
+## Critical Implementation Paths
+- **Payment Flow:**
+    - Create Payment Intent (`PaymentService.CreateAsync`)
+    - Confirm Payment Intent (`PaymentService.ConfirmAsync`)
+    - Capture Payment (`PaymentService.CaptureAsync`)
+    - Retrieve Payment Intent (`PaymentService.RetrieveAsync`)
+- **Customer Management:**
+    - Create Customer (`CustomerService.CreateAsync`)
+    - Retrieve Customer (`CustomerService.RetrieveAsync`)
+    - Update Customer (`CustomerService.UpdateAsync`)
+    - List Customer Payment Methods (`CustomerService.ListPaymentMethodsAsync`)
+- **Refund Flow:**
+    - Create Refund (`RefundService.CreateAsync`)
+    - Retrieve Refund (`RefundService.RetrieveAsync`)
