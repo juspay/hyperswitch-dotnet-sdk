@@ -47,6 +47,14 @@ namespace Hyperswitch.Sdk
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
+        
+        private static readonly JsonSerializerOptions PrettyPrintJsonSerializerOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            WriteIndented = true // Enable pretty printing
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HyperswitchClient"/> class.
@@ -167,8 +175,62 @@ namespace Hyperswitch.Sdk
                 // Ignore
             }
 
+            var errorMessageBuilder = new StringBuilder();
+            string white = "\u001b[37m";
+            string green = "\u001b[32m";
+            string reset = "\u001b[0m"; // Reset color
+
+            errorMessageBuilder.AppendLine($"{white}[HyperswitchClient ERROR] API request failed with status code {green}{(int)response.StatusCode}{reset}.");
+
+            if (errorResponse?.Error != null)
+            {
+                errorMessageBuilder.AppendLine($"{white}  Error Message: {green}{errorResponse.Error.Message}{reset}");
+                errorMessageBuilder.AppendLine($"{white}  Error Code: {green}{errorResponse.Error.Code}{reset}");
+            }
+
+            errorMessageBuilder.AppendLine($"{white}  Raw Response Body:{reset}");
+            errorMessageBuilder.AppendLine($"{green}{responseContent}{reset}");
+            
+            if(errorResponse != null)
+            {
+                errorMessageBuilder.AppendLine($"{white}  Deserialized Error Object:{reset}");
+                try 
+                {
+                    errorMessageBuilder.AppendLine($"{green}{JsonSerializer.Serialize(errorResponse, PrettyPrintJsonSerializerOptions)}{reset}");
+                }
+                catch (JsonException)
+                {
+                    errorMessageBuilder.AppendLine($"{green}(Failed to serialize error object){reset}");
+                }
+            }
+
+            // Add headers to the error message
+            errorMessageBuilder.AppendLine($"{white}  Response Headers:{reset}");
+            foreach (var header in response.Headers)
+            {
+                errorMessageBuilder.AppendLine($"{white}    {header.Key}: {green}{string.Join(", ", header.Value)}{reset}");
+            }
+            // Also include content headers if any
+            if (response.Content?.Headers != null)
+            {
+                foreach (var header in response.Content.Headers)
+                {
+                    errorMessageBuilder.AppendLine($"{white}    {header.Key}: {green}{string.Join(", ", header.Value)}{reset}");
+                }
+            }
+
+            // Add request ID if available
+            if (response.Headers.TryGetValues("Request-Id", out var requestIds))
+            {
+                errorMessageBuilder.AppendLine($"{white}  Request ID: {green}{requestIds.FirstOrDefault()}{reset}");
+            }
+
+            string errorMessage = errorMessageBuilder.ToString();
+            
+            System.Console.Error.WriteLine(errorMessage);
+
             throw new HyperswitchApiException(
-                errorResponse?.Error?.Message ?? $"API request failed with status code {response.StatusCode}.",
+                errorMessage,
                 (int)response.StatusCode,
                 responseContent,
                 errorResponse);
