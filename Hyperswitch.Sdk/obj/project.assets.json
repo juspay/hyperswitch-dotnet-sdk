@@ -11,10 +11,10 @@
     "/Users/sweta.sharma/.nuget/packages/": {}
   },
   "project": {
-    "version": "1.0.0-alpha",
+    "version": "1.0.0",
     "restore": {
       "projectUniqueName": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
-      "projectName": "Hyperswitch.Sdk",
+      "projectName": "Juspay.Hyperswitch.Sdk",
       "projectPath": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
       "packagesPath": "/Users/sweta.sharma/.nuget/packages/",
       "outputPath": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/obj/",

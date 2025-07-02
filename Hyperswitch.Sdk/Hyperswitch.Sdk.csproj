@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
 
     <!-- NuGet Package Metadata -->
-    <PackageId>Hyperswitch.Sdk</PackageId>
-    <Version>1.0.0-alpha</Version>
+    <PackageId>Juspay.Hyperswitch.Sdk</PackageId>
+    <Version>1.0.0</Version>
     <Authors>Hyperswitch Team</Authors> <!-- Placeholder - Update as needed -->
     <Company>Hyperswitch</Company> <!-- Placeholder - Update as needed -->
     <Description>Official .NET SDK for interacting with Hyperswitch APIs, providing methods for payments, refunds, customer management, and more.</Description>
@@ -25,3 +25,5 @@
   </PropertyGroup>
 
 </Project>
+
+
