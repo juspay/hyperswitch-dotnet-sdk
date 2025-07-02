@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyDescriptionAttribute(("Official .NET SDK for interacting with Hyperswitch APIs, providing methods for pa" +
     "yments, refunds, customer management, and more."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0-alpha+2937ecf8bdd693e97a35b722db0434163dce930a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+90dd32cdc0d3f4f403217e4ea968911b7061d32b")]
 [assembly: System.Reflection.AssemblyProductAttribute("Hyperswitch.Sdk")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Hyperswitch.Sdk")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
