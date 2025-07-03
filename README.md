@@ -34,20 +34,17 @@ The official Hyperswitch .NET SDK provides .NET developers with a simple and con
 
 ## Setup & Installation
 
-To use this SDK in your .NET application, you will need to reference it directly from its source code.
+Install the SDK using the .NET CLI:
+```bash
+dotnet add package Juspay.Hyperswitch.Sdk --version 1.0.1
+```
 
-1.  **Obtain the SDK Source Code:**
-    *   Ensure you have the complete source code for the `Hyperswitch.Sdk` project.
+Or via the NuGet Package Manager console:
+```powershell
+Install-Package Juspay.Hyperswitch.Sdk -Version 1.0.1
+```
 
-2.  **Add a Project Reference:**
-    *   In your consuming .NET project, add a reference to the `Hyperswitch.Sdk.csproj` file.
-    *   **Using Visual Studio:** Right-click "Dependencies" > "Add Project Reference..." > Browse to `Hyperswitch.Sdk.csproj`.
-    *   **Using .NET CLI:** `dotnet add reference path/to/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj`
-
-3.  **Target Framework:**
-    *   This SDK targets `.NET 9.0`. Ensure your consuming project is compatible.
-
-After adding the project reference, you can use the SDK's namespaces:
+After installing the package, you can use the SDK's namespaces:
 ```csharp
 using Hyperswitch.Sdk;
 using Hyperswitch.Sdk.Services;
@@ -242,6 +239,7 @@ Manages customers and their payment methods.
 *   **`DeleteCustomerAsync(string customerId)`**: Deletes a customer.
 *   **`ListCustomersAsync(CustomerListRequest? request = null)`**: Lists customers.
 *   **`ListPaymentMethodsAsync(string customerId)`**: Lists a customer's saved payment methods.
+*   **`ListPaymentMethodsForClientSecretAsync(string clientSecret)`**: Lists a customer's saved payment methods using a client secret.
 
 ---
 

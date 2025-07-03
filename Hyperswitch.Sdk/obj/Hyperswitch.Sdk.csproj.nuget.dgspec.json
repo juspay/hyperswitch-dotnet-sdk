@@ -5,7 +5,7 @@
   },
   "projects": {
     "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj": {
-      "version": "1.0.0",
+      "version": "1.0.1",
       "restore": {
         "projectUniqueName": "/Users/sweta.sharma/Desktop/Juspay/hyperswitch-dotnet-sdk/Hyperswitch.Sdk/Hyperswitch.Sdk.csproj",
         "projectName": "Juspay.Hyperswitch.Sdk",
