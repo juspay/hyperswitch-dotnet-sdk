@@ -7,7 +7,7 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>Juspay.Hyperswitch.Sdk</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Hyperswitch Team</Authors> <!-- Placeholder - Update as needed -->
     <Company>Hyperswitch</Company> <!-- Placeholder - Update as needed -->
     <Description>Official .NET SDK for interacting with Hyperswitch APIs, providing methods for payments, refunds, customer management, and more.</Description>
@@ -16,6 +16,7 @@
     <PackageProjectUrl>https://hyperswitch.io/</PackageProjectUrl> <!-- Placeholder - Update with actual project URL -->
     <RepositoryUrl>https://github.com/juspay/hyperswitch-dotnet-sdk</RepositoryUrl> <!-- Placeholder - Update with actual repo URL -->
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     
     <!-- Generate XML documentation file for NuGet package -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -24,6 +25,8 @@
     
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
 </Project>
-
-
